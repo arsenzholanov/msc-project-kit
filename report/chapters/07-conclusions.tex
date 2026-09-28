@@ -1,0 +1,162 @@
+\chapter{Conclusions and Future Work}
+\label{ch:conclusions}
+
+
+This chapter answers the three parts of the question posed in Chapter~\ref{ch:introduction},
+separating what was established from what was argued, and sets out the future work that
+follows from the limitations of Chapter~\ref{ch:evaluation}.
+
+\section{Conclusions}
+
+This project asked where strategic informational advantage sits in a prediction market whose
+traded object is a belief and whose resolver is a model, what it is worth, and what it
+should be called. It answers the three parts unevenly, and the unevenness is the honest
+result.
+
+On \emph{where}, the Sapience half of the answer is established and the Delphi half only
+partly. A Sapience request is broadcast in full to every client connected to the relayer,
+with no allowlist and no filtering, carrying the direction of every leg, the position size
+and the requester's address, and a forecaster who wants a fill has no way to send less. That
+comes from the protocol's own documentation and implementation, and the protocol does not
+conceal it; the Sapience trust model addresses custody, forgery and authority and simply
+does not treat observation as a harm. Delphi adds no pre-trade disclosure of its own,
+exposing intent only through a trade's effect on a pooled price, though its on-chain
+transactions remain subject to the ordinary transaction-ordering surface; at resolution it
+relocates the question to who specifies what the market meant. That last part rests on a
+design Gensyn documented in May 2026 whose current status their own documentation does not
+establish, as Section~\ref{sec:limitations}(h) records.
+
+On \emph{what it is worth}, the answer is measured but bounded. Against a matched benchmark
+holding competition, signal quality, dependence and risk identical, letting responders
+condition on the request removes about seventy-three per cent of an informed forecaster's
+surplus at the baseline configuration. Direction alone accounts for roughly ninety-five per
+cent of that, and the share lost rises with the forecaster's accuracy to about ninety-six
+per cent at the highest accuracy modelled. Those are properties of a simulator, not of a
+venue. The model contains no uninformed order flow, so its responders cannot be solvent in
+any configuration and it has no participation constraint; the magnitudes are therefore upper
+bounds on the forecaster's position rather than estimates of anyone's.
+
+On \emph{whether it is AI-MEV}, the honest answer is that this project does not settle it,
+and the reasons are worth more than a verdict would have been. The second limb of the
+definition, that the advantage exceeds ordinary compensation, is satisfied. The first, that
+the access is role-specific, is not, because both of the conditions testing it turn on whether capital-gated access to a public stream counts as
+protocol-specific, which is a question about the definition rather than about Sapience, and
+one this report inherits from the MEV literature rather than introducing. The condition that
+would make the case deepest, accumulated advantage from a participant's history, is argued
+from protocol structure and never measured. And the exclusion for risk compensation is set
+to zero by the model's assumption of risk-neutral responders rather than tested against
+anything.
+
+What does survive, and does not depend on the verdict, is a design critique. The mechanism
+compels complete, address-linked disclosure and offers nothing cheaper. Measured against the
+matched benchmark, the entire measured transfer accrues to the responders who quote on it,
+rather than to every party that merely watches the stream. And the cost rises with the quality of the information disclosed. A
+prediction market whose disclosure cost scales with forecaster skill is taxing the input it
+exists to attract, whatever the transfer is called.
+
+The report's other contribution needs no experiment and is the more durable of the two.
+Semantic validity, reproducibility and execution attestation are three properties, not three
+names for one. Reproducibility and attestation are not substitutes, because frontier models
+are non-deterministic and an inference cannot be proved by repeating the call. Neither
+touches whether the committed specification was a fair rendering of the question, and
+nothing in either protocol's stack does. Delphi's own history supports this: a designer with
+every incentive to close the whole problem removed the settling party's execution
+discretion, and published nothing to indicate that specification discretion went with it.
+That is an argument from silence, and the silence has a competing explanation, since Gensyn
+document no settlement mechanism at all; it is offered as support and not as proof.
+Verification is
+a statement about a computation; the residual is a statement about meaning, and it does not
+yield to more verification.
+
+The two halves meet at a single observation. Both protocols have built serious machinery
+against dishonesty, and what survives that machinery in both cases is not dishonesty. At
+execution it is a disclosure the mechanism compels and does not price. At resolution it is
+an ambiguity the mechanism cannot adjudicate. Neither is anyone's misconduct, which is
+precisely why neither is fixed by the mechanisms designed to detect misconduct.
+
+\section{Future work}
+
+Most of the items below follow directly from the lettered limitations in
+Section~\ref{sec:limitations}; the last two are refinements the analysis suggested rather
+than gaps it left, and are labelled as such.
+
+\paragraph{Responders who price risk and can decline.} The deepest limitation is that this
+model cannot separate information rent from risk compensation, because its responders are
+risk-neutral and quote their own posteriors without shading. A model in which responders
+set a protective spread, hold inventory and may refuse to quote would make that separation measurable rather
+than assumed, and would also produce a market whose participants do not lose money. This is
+the single change that would most improve the empirical half of the project.
+
+\paragraph{Accumulation across requests.} The accumulation limb is the report's weakest and
+the one a critic should attack first. Giving responders memory across events, so that an
+observer builds a posterior over a forecaster's skill from a reused address, would test
+whether the advantage this report argues for exists at all, and whether it survives a
+forecaster who rotates addresses. The concentration parameter specified in the project's
+design was not implemented and should be.
+
+\paragraph{The forecaster's own strategic choices.} Limitations (d), (e) and (f) each
+remove a decision a real forecaster makes: whether to submit a request at all when the
+expected disclosure cost exceeds the expected gain, how much to stake, and whether to split
+a position across requests. All three are cheap to add to the present model, and the first
+is plausibly the most important strategic response available to a real participant. The
+size-to-confidence correspondence on which the $B$ sweep's mapping to a real venue rests,
+limitation (e), is also testable against data if any venue publishes it, and it should be
+tested before that mapping is relied on.
+
+\paragraph{Multi-leg disclosure.} Chapter~\ref{ch:protocols} argues that a combination
+reveals joint rather than marginal belief, which is the strongest form of the disclosure
+argument, and no experiment supports it. Legs with a controlled redundancy parameter would
+test whether disclosure scales with the number of legs or only with their informational
+independence.
+
+\paragraph{A calibrated comparison against a pari-mutuel arm.} Running the same informed
+forecaster through a dynamic pari-mutuel mechanism would let the two protocols be compared
+directly rather than analysed side by side. It was scoped out, as Section~\ref{sec:sweep}
+records, because the calibration is a research question in its own right: comparing an auction with a pool
+requires matching capital at risk and transaction cost, and a comparison done carelessly
+would produce a headline about which protocol is better that the evidence could not support.
+
+\paragraph{Specification sensitivity.} The proposition that no verification mechanism
+guarantees semantic validity is argued from protocol analysis. It could be measured: holding execution fixed and
+varying a market's settlement specification in ways a reasonable creator might, one could
+report the rate at which the resolved outcome changes. The methodological care required is
+substantial, since a settled market yields a recorded protocol outcome rather than a ground
+truth, and for the ambiguous questions that are actually interesting the outcome is part of
+what is under study. This was scoped out for time, as Section~\ref{sec:sweep} records, and
+remains the natural next experiment.
+
+\paragraph{Source integrity as a fourth property.} A refinement rather than a gap. This report treats semantic validity as
+one property, but whether the evidence a judge read was accurate and unaltered is arguably a
+fourth, distinct from all three: a perfectly worded question can be settled against corrupted
+evidence, and neither reproducibility nor attestation speaks to it. Gensyn's own statement
+that receipts do not execute tools and do not prove an external tool returned accurate data
+\cite{gensyn2026receipts} is direct evidence for the distinction. It is not adopted here
+because populating the category properly would require analysis of data-source provenance in
+AI settlement that this project has not done, and naming a category one cannot then fill is
+worse than naming the question.
+
+\paragraph{Conditional recall as a mitigation.} Also a refinement. Evaluating a request inside a trusted
+execution environment and requiring it to be discarded when no trade results would target
+the accumulation gap directly. It is the mitigation best matched to the limb this report
+could not measure, and it is testable: an enclave-based responder could be compared against
+an unconstrained one under the accumulation model described above.
+
+\section{Closing remarks}
+
+The project set out to find where value is extracted in agentic prediction markets. In the
+half it could measure it found a transfer it can bound and cannot classify. Three things
+obstruct the classification and only one of them is external: the risk exclusion is zeroed
+by this model's assumptions, accumulation was never measured, and the question of whether
+capital-gated access to a public stream is protocol-specific is inherited from the MEV
+literature. Two of the three are mine. Saying so
+is more useful than a verdict the evidence would not carry. The claim that survives is
+smaller and better supported: a venue that leaves a participant no cheaper way to trade than
+to say everything has made a design choice, that choice has a price, and the price is
+highest for the participants the venue most wants.
+
+What I would defend furthest is the part that required no experiment. As settlement moves
+from people to models, the instinct is to ask whether the computation can be verified, and
+increasingly it can be. The question that then remains is whether the computation was the
+right one to perform, and no receipt, transcript or bond answers it. A protocol can remove
+every class of privilege it is able to name and still leave the party who wrote the question
+holding the only power that finally decides the outcome.

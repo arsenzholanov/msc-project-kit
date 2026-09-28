@@ -1,0 +1,84 @@
+\chapter*{Declarations}
+\addcontentsline{toc}{chapter}{Declarations}
+
+\section*{Originality}
+
+I declare that this report and the work it describes are my own, except where explicitly
+stated otherwise. All sources used have been acknowledged by complete references in the
+Vancouver style, and any text, figures, data or code drawn from elsewhere is attributed at
+the point of use. Material from my interim report of July 2026 is reused in
+Chapter~\ref{ch:background} as permitted, and Section~\ref{sec:intro-change} sets out how
+and why the project's direction changed after that submission.
+
+\section*{Use of generative AI}
+
+Generative AI assistants were used in three capacities: as a coding assistant, for the
+simulator, sweep scripts and regression tests of Chapter~\ref{ch:method}; as a writing and
+editing aid, in drafting, restructuring and proofreading the prose; and as an adversarial
+reviewer, checking claims against primary sources, the prose against the simulator's actual
+behaviour, and each chapter as an unfamiliar examiner would read it.
+
+All such use was under my direction and subject to my review, and its output was treated as
+a proposal to be checked rather than a result to be accepted. Several errors in earlier
+drafts were found that way and are acknowledged where they occur, and one conclusion was
+withdrawn when its reasoning did not survive scrutiny. The research question, the choice of
+protocols, the experimental design, the interpretation of the results and the conclusions
+are my own. I have read and verified every paragraph of this report, I take full
+responsibility for its entire contents, and every reference has been checked against its
+primary source.
+
+\section*{Ethical considerations}
+
+This project involved no human participants and gathered no personal data. It required no
+ethics approval.
+
+It nonetheless analyses mechanisms in live financial venues, and the boundary held is stated
+here as well as in Section~\ref{sec:ethics-intro}. No real capital was committed at any
+point. No transaction was signed on any network, mainnet or testnet. No request of any kind
+was sent to Sapience's auction relayer, which distributes requests to real market makers, so
+no synthetic order flow entered a live venue. All protocol facts were established by reading
+published documentation and open-source implementations, and every empirical result comes
+from a simulator.
+
+The work is dual-use, and saying so is part of holding the boundary. An analysis of what a
+mechanism discloses is also a description of what an observer could learn from it.
+Chapter~\ref{ch:protocols} therefore confines itself to design that the protocols themselves
+publish, names no specific market, participant or position, and presents mitigations
+alongside the analysis rather than deferring them. What the report contributes on this
+surface is a measurement of what disclosure costs and an argument about how that cost should
+be classified; it offers no method for capturing it, and
+Chapter~\ref{ch:evaluation} reaches no verdict on the classification. The ethical position
+does not depend on that verdict going either way. Section~\ref{sec:ethics-intro} sets out the boundary and the reasons it is
+defensible, and Chapter~\ref{ch:evaluation} what the analysis can and cannot claim.
+
+\section*{Sustainability}
+
+The computational cost of this project was small and is stated rather than estimated
+loosely. The complete experiment consists of six parameter sweeps at $200{,}000$ draws per
+cell, and the full pipeline that regenerates every number and every figure in this report
+runs in approximately five seconds on a single laptop CPU. No model training was performed,
+no GPU was used, and no inference against a hosted language model forms part of the
+experimental results. The generative AI assistance described above carries an energy cost
+that I have not attempted to quantify, and which is likely to exceed the cost of the
+experiment itself.
+
+The project deliberately avoided approaches with materially higher cost. The specification
+sensitivity experiment described in Chapter~\ref{ch:conclusions} as future work would have
+required several hundred language model inferences; it was cut for reasons of time rather
+than energy, but the saving is real and worth recording.
+
+\section*{Availability of data and materials}
+
+All code, data and the source of this report are available at
+\url{https://github.com/arsenzholanov/msc-project-kit}. The repository is private; read
+access has been granted to the supervisor and the second marker. The
+repository contains the simulator, the sweep and figure scripts, the regression tests, the
+raw sweep outputs, the LaTeX source of this report, and the working notes recording which
+protocol pages were consulted and on what dates. Its commit history records how the work
+developed.
+
+Every figure and every number in Chapters~\ref{ch:results} and~\ref{ch:evaluation} is
+regenerable from the repository with two commands, from a fixed seed; the sweep outputs
+committed to the repository are reproduced byte for byte by rerunning it. No data used in
+this project is confidential or subject to access restriction, and no third-party data was
+used.

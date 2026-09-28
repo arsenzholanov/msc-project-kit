@@ -1,0 +1,362 @@
+\chapter{Method}
+\label{ch:method}
+
+Chapter~\ref{ch:protocols} established that a Sapience request is broadcast in full, before
+any fill, to every client connected to the relayer. This chapter sets out how that
+disclosure is measured. It specifies a signalling model in which an informed forecaster
+requests a quote from competing responders, defines the matched benchmark in which
+responders may not condition on the request, states the two metrics, and closes by saying
+what the design can and cannot establish. The experiment is a simulator, not a replica of
+either venue: it is built to isolate one causal contrast, and its numbers describe that
+contrast rather than the economics of any live market.
+
+\section{The RFQ signalling model}
+\label{sec:model}
+
+A single binary event $Y \in \{0,1\}$ has public prior $\pi = P(Y=1)$. A contract pays one
+unit if $Y=1$ and nothing otherwise.
+
+\paragraph{The forecaster.} The forecaster observes a private signal $x$, drawn as
+$x \mid Y=1 \sim \mathcal{N}(m, 1)$ and $x \mid Y=0 \sim \mathcal{N}(-m, 1)$, and forms the
+posterior
+\[
+p_F \;=\; P(Y=1 \mid x) \;=\; \sigma\!\left(\log\tfrac{\pi}{1-\pi} + 2mx\right),
+\]
+where $\sigma$ is the logistic function. The signal strength $m$ is parameterised through
+a signal-quality parameter $q_F = P(\operatorname{sign} x \text{ correct}) = \Phi(m)$.
+
+One qualification belongs here rather than in a footnote. The forecaster acts on
+$p_F > 0.5$, which coincides with the sign of $x$ only when $\pi = 0.5$; at other priors the
+decision threshold shifts and the action's directional accuracy departs from $q_F$, while
+the underlying signal strength $m$ is unchanged. With $q_F = 0.75$, for instance, the action
+is correct $75.1\%$ of the time at $\pi = 0.5$ but $83.7\%$ at $\pi = 0.8$. $q_F$ should
+therefore be read as signal quality, equal to directional accuracy at an even prior, and the
+$\pi$ sweep of Section~\ref{sec:res-qf} varies the prior at fixed signal strength.
+
+\paragraph{The action.} The forecaster does not reveal $p_F$. It submits a request
+$R = (d, b)$, where $d = \mathbf{1}[p_F > 0.5]$ is the direction implied by $p_F$
+and $b$ is a \emph{disclosed confidence band}: the confidence $|2p_F - 1|$ coarsened into
+one of $B$ equal-width bands. The band count $B$ is the disclosure dial. At $B=1$ the
+request carries direction alone. As $B$ grows, $R$ approaches full revelation of $p_F$.
+
+The mapping onto the protocol is as follows. A Sapience broadcast carries the predicted
+outcome on every leg and the position size \cite{sapience2026relayer}. Direction corresponds
+to the predicted outcome; size stands in for the band, because a forecaster who is more
+confident stakes more, so the disclosed size is a signal of confidence. A venue that
+broadcasts an exact size therefore sits at the large-$B$ end of this range, and
+Section~\ref{sec:cannot} returns to how tight that correspondence is.
+
+\paragraph{The responders.} There are $n$ responders, indexed $j = 1 \dots n$. Responder $j$
+observes a private binary signal $s_j$ that is correct with probability $q$. Signals are
+exchangeable with dependence governed by $\rho$: with probability $\rho$ a responder's
+signal is a copy of a single common draw, and otherwise it is drawn independently. $\rho$ is
+therefore a mixture weight and not a correlation coefficient, and the signals are
+conditionally independent given the event at $\rho=0$ rather than unconditionally
+independent; the measured pairwise correlation there is $0.09$. Every signal is marginally correct with probability $q$ whatever $\rho$ is,
+so $\rho$ varies how much \emph{independent} information the responders hold collectively
+without varying how good any one of them is. That separation is what makes the $\rho$ sweep
+interpretable.
+
+\paragraph{Quoting.} Each responder quotes its own conditional posterior that $Y=1$,
+truthfully. Without the request, responder $j$ quotes
+\[
+P(Y{=}1 \mid s_j) \;=\; \frac{\pi\,q^{s_j}(1-q)^{1-s_j}}
+{\pi\,q^{s_j}(1-q)^{1-s_j} + (1-\pi)\,(1-q)^{s_j}q^{1-s_j}} .
+\]
+With the request, responder signals are independent of the forecaster's signal given $Y$, so
+the action's likelihood multiplies in directly:
+\[
+P(Y{=}1 \mid R, s_j) \;=\;
+\frac{P(R \mid Y{=}1)\,P(Y{=}1 \mid s_j)}
+{P(R \mid Y{=}1)\,P(Y{=}1 \mid s_j) + P(R \mid Y{=}0)\,P(Y{=}0 \mid s_j)} .
+\]
+The action likelihoods $P(R \mid Y)$ are the probabilities that the forecaster's signal falls
+in the region mapping to action $R = (d,b)$ under each state, and have no closed form because
+the band boundaries are level sets of the posterior. They are computed once per parameter
+cell by numerical quadrature of the two Gaussian densities over a fixed grid, and are a
+function of the model's parameters alone rather than of any realised draw.
+
+\paragraph{What responders are assumed to know, and what that costs.} Computing that
+likelihood requires responder $j$ to know $q_F$, $B$ and $\pi$ exactly, so the model grants
+them common knowledge of the forecaster's signal quality, of the disclosure granularity and
+of the prior. This is a substantive assumption and it is not neutral: a responder that
+misjudged $q_F$ would update too much or too little on the request, and the measured transfer
+would fall. The assumption is made because the alternative, giving responders a prior over
+$q_F$ and letting them learn it, is the cross-event learning the model deliberately excludes
+and which Section~\ref{sec:cannot} lists as unmodelled. Its effect is therefore to place the
+measurements at the upper end of what disclosure could be worth: they describe responders who
+know exactly how informed their counterparty is.
+
+\paragraph{Selection.} The forecaster then takes the best quote available: the lowest \textsc{yes} price when buying
+\textsc{yes}, the highest when buying \textsc{no}.
+
+This is best-of-$n$ posterior quoting and it is deliberately not a Bertrand equilibrium. It
+is a behavioural rule, not a derived one, and two things follow that the reader should have
+before any result. First, no responder shades, so none exercises market power at any $n$;
+what varies with $n$ is only how many quotes the forecaster selects over. Second, and more
+consequentially, quoting one's own posterior is zero-profit only unconditionally. The
+responder that actually trades loses in expectation at every $n$ and in both arms, because
+the model contains no uninformed order flow to offset losses to an informed counterparty,
+and because under best-of-$n$ selection the winner is the responder whose signal was most
+misleading in the forecaster's favour. A real market maker would price both effects by
+widening its quote. This one cannot, and Section~\ref{sec:cannot} sets out what that costs
+the interpretation of the result.
+
+\section{The matched no-disclosure benchmark}
+\label{sec:benchmark}
+
+The experiment is a single causal contrast.
+
+\begin{itemize}
+  \item \textbf{Disclosure arm.} Responder $j$ observes $R$ and $s_j$, and quotes
+    $P(Y=1 \mid R, s_j)$.
+  \item \textbf{No-disclosure arm.} Responder $j$ observes $s_j$ only, and quotes
+    $P(Y=1 \mid s_j)$.
+\end{itemize}
+
+Everything else is held identical: the same realised event, the same forecaster signal, the
+same responder signals, the same $n$, $q$ and $\rho$, the same quoting rule and the same size
+at risk. Both arms are run on the same drawn randomness, so the comparison is paired draw by
+draw. The only difference between them is whether the responder's view carries the request.
+
+\paragraph{What the benchmark is, and a second reading of $L$ that follows from it.} The
+choice of benchmark determines what $L$ measures, so the consequence is stated here rather
+than after the results. Because responders quote truthfully and the model contains no
+uninformed order flow, the no-disclosure arm is a mechanism in which market makers lose
+heavily and would in reality withdraw rather than quote. It is a clean counterfactual for
+isolating the effect of disclosure, which is what it is for, and it is not a viable market.
+
+Two readings of $L$ therefore survive and this report can exclude neither. On the first, $L$
+is surplus transferred from the forecaster to the responders who quote. On the second, it is
+the share of a structural loss that observing the request allows a responder to recover.
+The arithmetic is identical under both; what differs is whether the baseline against which
+the transfer is measured is one a responder would ever accept. Nothing in the experiment
+distinguishes them, and Section~\ref{sec:limitations}(b) treats this as a limitation on what
+the measurement can be said to establish.
+
+\paragraph{The invariant, and how it is enforced.} Responders must observe the forecaster's
+\emph{action} and never the private signal or the posterior. This is enforced structurally:
+the quoting function receives a view object carrying the responder's own signal and, in the
+disclosure arm, the direction and band. There is no field on that object through which $x$
+or $p_F$ could travel, and the forecaster's state is a separate object never passed to a
+responder.
+
+\paragraph{Why a structural guarantee was not sufficient.} A first version of this model gave
+the forecaster a binary signal and a deterministic threshold rule. The interface invariant
+held: no responder function could reference the forecaster's signal. The invariant was
+nonetheless vacuous, because with a binary signal and a threshold rule the action is a
+lossless encoding of the signal. The direction \textsc{yes} occurred exactly when the
+forecaster's signal was $1$, so a responder conditioning on the action had, in information
+terms, conditioned on the signal itself; measured over $200{,}000$ draws, the action agreed
+with the signal in every case, and the posterior took exactly two values. A model in which
+the action encodes the signal without loss cannot measure disclosure, because there is no
+disclosure decision left to vary. The defect was found by running the invariant check as
+soon as the core loop first executed, rather than at the end, and it is reported here
+because the fix is the reason the model has the shape it does: the continuous signal and the
+banded action exist precisely so that $R$ is a strict coarsening of $p_F$. A parametrised
+regression test asserts that the number of distinct actions is at most $2B$ while the number
+of distinct posteriors is larger by more than an order of magnitude. That is a check on the
+support of the action, not on how much information it carries: it would fail immediately if
+the action space collapsed back onto the signal, which is the defect described here, and it
+would pass under a subtler partial leakage. It bounds the cardinality and no more, and the
+claim made for it should be no stronger.
+
+\section{Parameters and sweep design}
+\label{sec:sweep}
+
+Six parameters are swept, one at a time, from the baseline $n=5$, $q=0.65$, $\rho=0$,
+$q_F=0.75$, $B=8$, $\pi=0.5$, with $200{,}000$ draws per cell and the fixed seed
+$20260907$. The baseline was fixed before any sweep was run, and the seed-robustness check
+of Section~\ref{sec:res-seeds} repeats every sweep at the four further seeds $11$, $22$,
+$33$ and $44$. Table~\ref{tab:params} lists them.
+
+\begin{table}[htbp]
+\centering
+\begin{tabularx}{\textwidth}{p{0.10\textwidth}p{0.30\textwidth}p{0.20\textwidth}X}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} & \textbf{Range swept} & \textbf{Why it is varied} \\
+\midrule
+$n$ & Number of competing responders & $1$ to $30$ & More responders means more parties observing the request and more competition for the business. Which dominates is the question \\
+$q$ & Responder signal quality & $0.51$ to $0.95$ & A responder that is already well informed may learn little from the request \\
+$\rho$ & Dependence among responder signals & $0$ to $1$ & Higher correlation means responders collectively hold less independent information \\
+$B$ & Disclosed confidence bands & $1$ to $64$ & The disclosure dial: direction alone at $B=1$, approaching full revelation as $B$ grows \\
+$q_F$ & Forecaster signal quality (directional accuracy at $\pi = 0.5$) & $0.55$ to $0.95$ & The headline magnitude depends on how well informed the forecaster is, so it must not be left at one value \\
+$\pi$ & Public prior & $0.1$ to $0.9$ & An even prior is the most favourable case for an informed trader and should not be assumed \\
+\bottomrule
+\end{tabularx}
+\caption{The swept parameters. $B$ is the one that varies the mechanism's design rather than
+its environment, which is why Chapter~\ref{ch:evaluation} reads it as a mitigation.}
+\label{tab:params}
+\end{table}
+
+\paragraph{What is not swept.} Two parameters named in the project's original design are
+absent. Multi-leg requests, with a controlled redundancy parameter among legs, were not
+implemented; the disclosure of joint belief argued in Section~\ref{sec:sapience} is
+therefore argued and not measured. Order-flow concentration, the probability that the same
+responder sees successive requests, was also not implemented. This matters more than it may
+appear and Section~\ref{sec:cannot} treats it directly.
+
+Two further experiments named in the original design were scoped out rather than left
+unfinished, and are recorded here so that their later mention as future work is not a first
+mention: a calibrated comparison against a pari-mutuel arm, cut because matching capital at
+risk and transaction cost between an auction and a pool is a research question of its own;
+and a specification-sensitivity experiment against a live judge, cut for time.
+
+$q_F$ and $\pi$ were added to the sweep after a first pass reported a headline magnitude
+that depended on both while holding both fixed. A result stated at one value of a parameter
+that strongly governs it is not a result about the mechanism, and the two sweeps are
+reported in Section~\ref{sec:res-qf}.
+
+\section{Metrics}
+\label{sec:metrics}
+
+Two quantities are reported together.
+
+\paragraph{The transfer.} Buying \textsc{yes} at price $P$ the forecaster receives $Y - P$;
+buying \textsc{no} it pays $1 - P_{\textsc{yes}}$ and receives $(1-Y)$ less that price, so in
+both directions it gains when the contract settles its way. The economic measure is
+\[
+L \;=\; S_{\text{no-disclosure}} \;-\; S_{\text{disclosure}},
+\]
+where $S$ is the forecaster's expected surplus, that is the realised payoff net of the price
+paid. Chapter~\ref{ch:results} also reports $L$ as a proportion,
+$L / S_{\text{no-disclosure}}$, the share of the forecaster's benchmark surplus that does not
+survive disclosure. $L$ is a measured quantity with a deliberately neutral name. It is not called the MEV,
+in the code, in the figures or in the prose, because how much of it meets the definition in
+Chapter~\ref{ch:introduction} is the question Chapter~\ref{ch:evaluation} asks, and that
+question must not be settled by a variable name.
+
+Because both arms run on identical randomness, $L$ is a paired difference and its standard
+error is that of the per-draw difference rather than the sum of the two arms' errors. At
+$200{,}000$ draws the $95\%$ interval on $L$ is $\pm 0.0007$ at the baseline, and
+Chapter~\ref{ch:results} draws it on every figure.
+
+That interval answers whether $L$ differs from zero in a given cell. It is the wrong
+interval for asking whether $L$ differs between two cells. Every cell in a sweep is run from
+the same seed and consumes the random stream in the same order, so cells share the realised
+event and the forecaster's signal, and a between-cell difference is itself paired. Its
+interval is typically an order of magnitude tighter: comparing $n=15$ with $n=30$, for
+instance, the correct interval is $\pm 2\times10^{-5}$ rather than $\pm 7\times10^{-4}$;
+that comparison was computed directly for this sentence, since the recorded step intervals
+are between adjacent cells.
+The sweeps therefore record, for every step, both the change in $L$ and the paired interval
+on that change, and Chapter~\ref{ch:results} judges resolution against the latter. Using a
+single cell's interval for this purpose understates the experiment's resolving power, which
+is a conservative error but an error nonetheless.
+
+\paragraph{The information.} The informational measure is how much a responder learns from
+the request,
+\[
+I \;=\; \mathbb{E}_R\!\left[\, D_{KL}\!\left(P(Y \mid R, s_j) \,\big\|\, P(Y \mid s_j)\right) \right],
+\]
+reported in nats, and averaged over responders as well as over draws. Each per-draw
+divergence is exact, because the simulator has the true posteriors, but the reported figure
+is a Monte Carlo mean like any other and its interval is recorded alongside it.
+
+Reporting $I$ alongside $L$ is intended to separate how much is learned from how much
+surplus moves. Section~\ref{sec:res-info} shows that $I$ is invariant by construction in two
+of the six sweeps, so it contributes as a check in those and as a measurement only in the
+other four.
+
+The quoted spread, defined on each draw as the difference between the highest and lowest
+of the $n$ quotes and averaged over draws, both arms' surpluses and the responder surplus
+are also recorded. Because
+the model is zero-sum between the two parties, responder surplus is the negative of
+forecaster surplus and no crossover between them is possible; that question, raised in the
+project's original design, is therefore answered trivially rather than empirically.
+
+\section{Implementation and reproducibility}
+\label{sec:implementation}
+
+The simulator is about 450 lines of Python using NumPy and SciPy, excluding tests. Every run is
+seeded and deterministic. Sweeps write CSV files to \texttt{data/raw}, and a separate script
+turns those files into the figures reproduced in Chapter~\ref{ch:results}; no figure in this
+report is edited by hand, so each is regenerable with a single command. Eleven regression tests
+cover the model, including two posterior calculations checked by hand against the arithmetic
+in Section~\ref{sec:model}, a reconstruction of the degenerate binary-signal configuration
+described above, a check that the action likelihoods form a distribution, the
+parametrised coarsening assertion described above, and a test that quotes in the
+no-disclosure arm do not move when the action changes.
+
+Because every reported number comes from one realisation, the sweeps were also re-run in
+full at five seeds; Section~\ref{sec:res-seeds} reports the result. The repository records the sweep parameters and the
+seed in every data file, and the date and configuration of the run alongside them.
+
+Three numerical guards are applied and are noted here because they are not otherwise
+visible: the action-likelihood table is floored at $10^{-15}$ so that an unreachable band
+cannot produce a division by zero, the divergence calculation clips its arguments away from
+zero and one, and the band index is clipped to its valid range for the case where a
+posterior saturates to exactly one in floating point. All three are guards rather than
+adjustments and none changes a reported quantity, but the implementation is described here
+as complete and they belong in that description.
+
+\section{What this design can and cannot establish}
+\label{sec:cannot}
+
+This section is deliberately placed before the results rather than after them.
+
+\paragraph{The sign of the effect is expected, and is not the finding.} That allowing a
+market maker to condition on an informed order moves surplus from the informed party to the
+market maker is the standard adverse-selection result. Glosten and Milgrom show that a
+specialist facing a mixture of informed and uninformed order flow sets a spread reflecting
+the probability that the counterparty is informed \cite{glosten1985bidask}, and Kyle shows
+that an informed trader's advantage is bounded by how much the market maker can infer from
+the order flow it observes \cite{kyle1985continuous}. A simulator that failed to reproduce
+$L > 0$ would be evidence that the simulator was wrong, not evidence about disclosure.
+Chapter~\ref{ch:results} therefore treats the sign as a validity check on the harness and
+reports the \emph{shape} of the effect as the finding: its direction and monotonicity in
+$n$, its behaviour in $q$, its response to $\rho$, and the relationship between $I$ and $L$.
+
+\paragraph{The numbers are internal to the model.} $L$ is expressed in units of the binary
+contract under a specific signal structure, prior and competition rule. It is not an estimate
+of value transferred on any live venue, and no such estimate is offered anywhere in this
+report. What transfers across is the comparative structure: which direction the effect moves
+as a parameter changes, and where it is largest.
+
+\paragraph{The accumulation limb is argued, not demonstrated.} Chapter~\ref{ch:protocols}
+observed that an address in every broadcast makes a per-address history cheap to
+accumulate. The simulator does not model this. Responders carry no state across events, so
+even had the concentration parameter been implemented it would have measured repeated
+\emph{exposure} rather than accumulated inference. Whether accumulation converts into an
+advantage that competitive quoting does not compensate is therefore a proposition this
+report argues from protocol structure, and it is one of the two places where the evidence is
+weakest.
+
+\paragraph{The sizing decision is abstracted away.} Traded size is held constant across all
+cells. An earlier configuration scaled size with the disclosed band, which confounded the
+disclosure dial: raising $B$ then both revealed more and changed how much the forecaster
+staked, and the no-disclosure surplus moved with a parameter that should not have touched it.
+Holding size fixed makes $B$ vary disclosure and nothing else, at the cost of removing the
+forecaster's choice of how much to stake. A forecaster who reduced size to reduce disclosure
+is therefore outside the model, and the correspondence between $B$ and a real broadcast size
+is weaker for it.
+
+\paragraph{Responders quote truthfully, bear no risk, and cannot widen.} Real market makers
+hold inventory, face capital constraints, price risk as well as information, and shade their
+quotes against the possibility that winning is itself bad news. The model's responders do
+none of this, so the surplus attributed here to information would in a real venue be mixed
+with compensation for risk borne. That is the distinction the report's definition turns on,
+and the model resolves it by construction rather than by measurement.
+
+\paragraph{There is no uninformed order flow, so the benchmark is not a viable mechanism.}
+Every request in this model comes from the informed forecaster. In Glosten and Milgrom a
+market maker survives because gains from uninformed traders offset losses to informed ones
+\cite{glosten1985bidask}; with that population removed, responders lose in every
+configuration and would exit rather than quote. Two consequences follow. The magnitudes are
+upper bounds on the forecaster's position rather than estimates of any real one. And $L$
+admits a second reading that this report cannot exclude: measured against a benchmark no
+responder would join, it is as defensible to call it the share of a structural loss that
+disclosure recovers as to call it surplus transferred. Chapter~\ref{ch:evaluation} returns
+to this.
+
+\paragraph{One event, one forecaster, one round.} There is no repeated play, no reputation,
+no competition between forecasters, and no strategic choice of whether to trade at all. A
+forecaster who could decline to submit a request when the expected disclosure cost exceeded
+the expected gain would face a different problem from the one modelled here.
+
+What the design does establish is a clean causal contrast under a matched benchmark: holding
+competition, signal quality and dependence identical, with no risk borne in either arm, it
+isolates the effect of
+letting responders condition on the request, and it measures how that effect varies with the
+environment and with the granularity of what is disclosed. Chapter~\ref{ch:results} reports
+those measurements and Chapter~\ref{ch:evaluation} asks what they are worth.

@@ -1,0 +1,39 @@
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+A prediction market must expose a participant's belief twice: once to whoever prices the
+position, and once to whoever decides what happened. Where the traders are agents and the
+resolver is a language model, both exposures change character, and two protocols now running
+make opposite choices at each. Delphi matches against a dynamic pari-mutuel pool, adding no
+pre-trade disclosure of its own, and settles by AI judgement of a specification fixed in
+advance. Sapience broadcasts a request for quotes before any fill and resolves through a
+bonded optimistic-oracle assertion. This report asks where strategic informational advantage
+sits in such markets, what it is worth, and whether it is AI-MEV: value captured through
+role-specific protocol access, beyond what forecasting ability or ordinary compensation for
+risk would earn.
+
+From published documentation and implementation source, the report establishes that a
+Sapience request reaches every connected client, unfiltered, carrying the direction of every
+leg, the position size and the requester's address, with no way to disclose less and still
+trade. A simulator measures what that costs against a matched benchmark in which responders
+cannot condition on the request. Disclosure removes about seventy-three per cent of an
+informed forecaster's expected surplus at the baseline; direction alone accounts for roughly
+ninety-five per cent of that, so coarsening size is nearly useless as a mitigation; and the
+share lost rises with the forecaster's accuracy, to about ninety-six per cent for the
+best-informed forecaster modelled.
+
+The report does not settle whether that transfer is AI-MEV. Of the definition's two limbs,
+excess over ordinary compensation is satisfied on the protocol's own documentation, while
+role-specificity turns on whether capital-gated access to a public stream counts as
+protocol-specific, a question the MEV literature has not resolved. What survives regardless
+is a design critique: the mechanism compels complete, address-linked disclosure, offers
+nothing cheaper, and the entire measured transfer accrues to the responders who quote.
+
+The second contribution needs no experiment. Semantic validity, reproducibility and
+execution attestation are three distinct properties; the latter two are not substitutes,
+because commercial models are non-deterministic; and no verification mechanism guarantees
+the first. Both protocols have built serious machinery against dishonesty. What survives it in
+each case is a disclosure the mechanism compels and does not price, and an ambiguity it
+cannot adjudicate; neither is dishonesty, which is why neither is caught. The model cannot separate information rent from risk
+compensation, its benchmark is not a market any responder would join, and no live venue was
+measured.

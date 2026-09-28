@@ -1,0 +1,69 @@
+\documentclass[a4paper, twoside, 11pt]{report}
+
+% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% Page layout
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm,marginparwidth=1.75cm]{geometry}
+
+% Packages
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
+\usepackage{enumitem}
+% \usepackage{xurl}  % not installed: tlmgr mirror checksum failure, 7 Sep 2026.
+% Affects URL line-breaking in the bibliography only. If a URL visibly overflows the
+% margin in the compiled PDF, add \usepackage{url} or hyperref breaklinks instead.
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\setlist[itemize]{leftmargin=1.2em}
+\setlist[enumerate]{leftmargin=1.4em}
+\sloppy
+
+\graphicspath{{figures/}}
+
+% Drafting placeholder; every use must be gone before submission.
+\newcommand{\todo}[1]{\textbf{[TODO: #1]}}
+
+\title{Execution and Resolution as Information-Asymmetry Surfaces in Agentic Prediction Markets}
+\author{Arsen Zholanov}
+
+\begin{document}
+
+% The department's style calls this References, not Bibliography. babel resets
+% \bibname at \begin{document}, so this must come after it.
+\renewcommand{\bibname}{References}
+
+\input{title/title.tex}
+
+\input{frontmatter/abstract.tex}
+\input{frontmatter/acknowledgements.tex}
+
+\tableofcontents
+\listoftables
+\listoffigures
+
+\input{chapters/01-introduction.tex}
+\input{chapters/02-background.tex}
+\input{chapters/03-protocols.tex}
+\input{chapters/04-method.tex}
+\input{chapters/05-results.tex}
+\input{chapters/06-evaluation.tex}
+\input{chapters/07-conclusions.tex}
+
+\bibliographystyle{vancouver}
+\bibliography{bib/references}
+
+\input{frontmatter/declarations.tex}
+
+\end{document}

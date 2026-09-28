@@ -1,0 +1,635 @@
+\chapter{Two Protocols, Two Relocations}
+\label{ch:protocols}
+
+This chapter sets Delphi and Sapience side by side. It describes how each matches a
+position and how each resolves a question, traces what information each design makes
+visible, to whom, and at what moment, and then asks what the verification machinery around
+each one actually guarantees. The argument the chapter builds is that the two protocols
+make opposite choices at both points, that neither choice removes strategic informational
+advantage, and that each choice moves it somewhere else. The chapter closes by separating
+three properties that are routinely conflated in discussion of AI settlement, and by
+reading Delphi's own architectural history as evidence that the separation matters.
+
+Protocol documentation changes quickly. Every factual claim here is attributed to a primary
+source with the date it was read; the access dates are collected in the repository. Where a
+claim could not be established from a primary source, the text says so rather than
+smoothing over it.
+
+\section{Delphi: pari-mutuel execution, AI-judged resolution}
+\label{sec:delphi}
+
+Delphi is an open information market platform built on Gensyn's decentralised AI
+infrastructure. It launched on the Gensyn testnet in December 2025 and on the Gensyn network
+itself on 22 April 2026, and anyone can launch a market \cite{gensyn2026delphilaunch}.
+Gensyn's SDK documentation refers to a mainnet deployment \cite{gensyn2026sdk}; the launch
+post does not use that word, so no mainnet launch date is asserted here.
+
+\subsection{Pricing}
+
+Gensyn rejected both dominant market designs explicitly, and their stated reasoning is
+worth recording because it explains the design that resulted. Gensyn's position is that a
+logarithmic market scoring rule \cite{hanson2007lmsr} requires initial liquidity and that
+the party providing it often loses money, which they judge tolerable when a platform
+absorbs that loss across a curated set of markets but unworkable under permissionless
+creation; and that an order book requires a counterparty on the other side of every trade,
+which in a thin market is often nobody \cite{gensyn2026delphi}. An automated market maker
+of the constant-function kind is a third possibility that Gensyn do not discuss, and which
+Sapience also declines in favour of the auction described in
+Section~\ref{sec:sapience}.
+
+Delphi therefore prices with a dynamic pari-mutuel cost function
+\cite{pennock2004dpm,gensyn2026delphi}. In a classical pari-mutuel market all stakes enter
+a pool and a single price is fixed at close, so a trader early in a market's life is
+guessing at the price they will eventually receive. Pennock's dynamic variant keeps the
+pari-mutuel property that the institution bears no risk, since payouts come from the pool,
+and adds continuous pricing during trading, so that a trader can react to new information
+and can sell before the event resolves; the price derives from the money wagered on each
+outcome and the shares outstanding against it \cite{pennock2004dpm}. As demand accumulates on one side, the marginal cost of buying that
+side rises and the implied payout adjusts. The market creator chooses any non-zero initial
+liquidity and retains a position in their own market \cite{gensyn2026delphi}.
+
+Two deployments must be distinguished. Gensyn's SDK documentation states that Delphi application markets use dynamic
+pari-mutuel pricing, and that automated settlement changes settlement and routing without
+changing Delphi markets to a logarithmic scoring rule. The separate Gensyn agent trading
+competition, on \texttt{competition-testnet}, does use LMSR contracts through the same SDK
+trading interfaces \cite{gensyn2026sdk}.
+
+Each market is deployed through a factory as its own non-upgradeable contract. Gensyn can
+moderate what appears in its application but cannot rewrite a market after launch. The
+contracts do not distinguish humans from agents: anyone with a wallet may buy, sell and
+redeem against the same liquidity \cite{gensyn2026delphi}.
+
+\subsection{Settlement}
+
+Gensyn's stated position is that human resolution committees are slow, capturable and
+expensive; that optimistic-oracle staking designs are slow by construction and
+capital-inefficient at the long tail; and that AI judges are fast and cheap but, in a
+closed system, ask the user to trust the operator. Their conclusion is that the AI judge is
+the right primitive and that the work lies in making it trustworthy, with a model reading
+real-world sources and judging what has already happened rather than forecasting what is to
+come \cite{gensyn2026delphi}.
+
+Settlement is offered in tiers, so a creator may trade speed against verifiability.
+Foundation models settle quickly and broadly, chosen from a curated list. Open-source models
+running inside Gensyn's Reproducible Execution Environment produce a receipt that can be
+independently rerun to verify the answer, settling more slowly in exchange for that
+property. Hosted variants let creators outsource the reproducible tier to dedicated
+infrastructure providers \cite{gensyn2026delphi}.
+
+The detail that matters for this project is who writes the settlement procedure. In the
+design documented in May 2026, creators should write the prompts that settle their own
+markets, on the reasoning that a creator understands their question and its edge cases
+better than the platform does. Gensyn report
+that testnet experience taught them that the cheapest way to obtain a wrong settlement is a
+vague prompt, and they responded with category-aware templates across sports, politics,
+crypto, economics, science and culture, one template per settlement path, that supply
+structure while the creator supplies the substance. Market questions also pass a keyword
+blocklist and a semantic check \cite{gensyn2026delphi}.
+
+Gensyn are candid about the limit of this. Their own framing is that none of it makes the
+AI judge infallible; it makes the failure modes legible, so that a bad settlement traces
+back to a specific prompt, model and run rather than to an opaque operator decision, and on
+the reproducible tier anyone may rerun the call \cite{gensyn2026delphi}. Legibility and
+reproducibility are real properties. Section~\ref{sec:threelayer} argues that neither is
+the property a disputed settlement actually needs.
+
+The current deployment differs from the design just described. Gensyn's SDK documentation
+states that testnet and mainnet use automated-settlement gateways by default, that some
+legacy markets remain on the earlier deployment, and that the client resolves a market's
+owning gateway before each market-scoped operation. Automated settlement changed gateway
+addresses and market routing, and market statuses now include a failed state that requires
+liquidation rather than redemption \cite{gensyn2026sdk}. Section~\ref{sec:evolution} treats
+this migration as evidence rather than as background.
+
+\section{Sapience: RFQ execution, optimistic-oracle resolution}
+\label{sec:sapience}
+
+Sapience is a prediction market protocol, described by its own repository as MIT-licensed
+and fully open source, in which users stake collateral on
+the outcomes of future events. Positions are matched by a request-for-quote auction and
+settled on-chain by an escrow contract, with resolution delegated to an optimistic oracle
+\cite{sapience2026relayer}.
+
+\subsection{Matching}
+
+Sapience uses neither an order book nor an automated market maker. The auction relayer is a
+WebSocket service brokering a request-for-quote flow between two roles. A predictor
+initiates an auction by broadcasting their picks and the collateral they wish to commit,
+authenticated by an EIP-712 \texttt{AuctionIntent} signature. A counterparty, typically a
+vault bot, watches auctions and submits a bid carrying the EIP-712 \texttt{MintApproval}
+signature that allows the predictor to mint the on-chain position
+\cite{sapience2026relayer}.
+
+Figure~\ref{fig:rfqflow} shows the sequence. Bids carry short expiries and the auction
+resolves in seconds \cite{sapience2026docs}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  lifeline/.style={draw=black!35, dashed, thick},
+  actor/.style={draw, rounded corners=2pt, fill=black!4, inner sep=5pt, minimum width=27mm},
+  msg/.style={-{Latex[length=2mm]}, thick},
+]
+\node[actor] (P) at (0,0) {Predictor};
+\node[actor] (R) at (5.4,0) {Relayer};
+\node[actor] (C) at (11.0,0) {\begin{tabular}{c}Every connected\\client\end{tabular}};
+
+\foreach \x in {0,5.4,11.0} \draw[lifeline] (\x,-0.55) -- (\x,-7.4);
+
+\draw[msg] (0,-1.2) -- node[above,font=\scriptsize] {\texttt{auction.start}} (5.4,-1.2);
+\draw[msg] (5.4,-2.0) -- node[above,font=\scriptsize] {\texttt{auction.ack}} (0,-2.0);
+
+% the disclosure moment, banded so it reads as one step
+\begin{scope}[on background layer]
+  \fill[black!7, rounded corners=3pt] (4.6,-4.35) rectangle (11.9,-2.7);
+\end{scope}
+\draw[msg, very thick] (5.4,-3.1) -- node[above,font=\scriptsize\bfseries] {\texttt{auction.started}} (11.0,-3.1);
+\node[font=\scriptsize\itshape, text=black!65, text width=58mm, align=center, anchor=north, fill=black!7, inner sep=1.5pt]
+  at (8.2,-3.3) {every pick with its predicted outcome,\\the position size, the predictor's address};
+\node[font=\scriptsize\itshape, text=black!65, text width=58mm, align=center, anchor=north, fill=black!7, inner sep=1.5pt]
+  at (8.2,-3.95) {no allowlist, no subscription, no filtering};
+
+\draw[msg] (11.0,-5.0) -- node[above,font=\scriptsize] {\texttt{bid.submit}} (5.4,-5.0);
+\draw[msg] (5.4,-5.8) -- node[above,font=\scriptsize] {\texttt{auction.bids}} (0,-5.8);
+\draw[msg] (0,-6.9) -- node[above,font=\scriptsize] {\texttt{mint()} on-chain, both signatures} (5.4,-6.9);
+\end{tikzpicture}
+\caption{The Sapience request-for-quote flow. The shaded step is where a forecaster's belief
+becomes visible: it precedes any fill, it reaches every connected client rather than a
+selected set of market makers, and it carries the complete request. Everything before it is
+private to the predictor and everything after it is a response to what it revealed.}
+\label{fig:rfqflow}
+\end{figure}
+
+The relayer never takes custody. Sapience's stated trust model is that the relayer only
+routes messages and can neither forge bids nor modify position sizes nor steal funds; that
+responder signatures are verified on-chain, so a bid is worthless unless correctly signed;
+that the immutable audited contract is the sole authority over collateral and settlement;
+and that liquidity vaults hold pooled capital whose manager decides which auctions to bid on
+but cannot withdraw funds \cite{sapience2026docs}. Section~\ref{sec:execflow} returns to
+what this trust model does and does not cover.
+
+\subsection{Combinations}
+
+A prediction is one or more picks together with a position size, where a pick is a question
+paired with an expected resolution. Multi-pick predictions combine several into a single
+position that pays only if every pick resolves correctly. For independent picks the implied
+probability is the product of the individual probabilities, so a combination
+carries a lower combined probability and a correspondingly higher payout
+\cite{sapience2026docs}. Combinations therefore express compound forecasts that a
+single-event venue cannot. They also change what a broadcast reveals, and in the strongest
+way available to this argument. A single-pick request discloses a marginal belief about one
+event. A multi-pick request discloses the direction the forecaster takes on every leg at
+once, which is a statement about the joint structure of their beliefs rather than a set of
+independent statements: it identifies which combination of outcomes they will stake on
+together. Section~\ref{sec:execflow} treats the broadcast payload accordingly.
+
+\subsection{Resolution}
+
+Sapience settles through UMA's optimistic oracle. After a market's end time the deployer
+submits a resolution with a bond. During a challenge period anyone may dispute by posting a
+bond of their own. If the assertion is undisputed, participants withdraw according to it. If
+it is disputed, the question passes to a vote of UMA stakers, and the losing side forfeits
+its bond \cite{sapience2026docs,uma2026oracle}.
+
+UMA's documentation sets out the voting mechanism. Stakers vote in a twenty-four hour commit
+phase followed by a twenty-four hour reveal phase. A dispute resolves when a minimum
+sixty-five per cent majority of staked UMA is cast for a single outcome. Slashing and
+rewards are described as incentivising stakers to vote for the most correct answer, and
+secret ballots are described as preventing lazy voters from copying others and dishonest
+voters from coordinating on an incorrect result \cite{uma2026oracle}.
+
+\section{Information flow at execution}
+\label{sec:execflow}
+
+The two designs expose a trader's intent at opposite moments. This section establishes what
+is exposed, to whom, and when. Table~\ref{tab:execflow} summarises it.
+
+\begin{table}[htbp]
+\centering
+\begin{tabularx}{\textwidth}{p{0.22\textwidth}p{0.34\textwidth}X}
+\toprule
+\textbf{Question} & \textbf{Delphi} & \textbf{Sapience} \\
+\midrule
+When is intent visible & After the trade, through its effect on the quoted price & Before any fill, in the request itself \\
+What is visible & Direction and size, aggregated into a price movement across the share supply & The complete pick set, with the predicted outcome on every leg, and the position size \\
+Who can see it & Any on-chain observer, after the fact & Every client connected to the relayer, at broadcast time \\
+Is the trader linkable across requests & By the transacting address, on-chain & By the predictor address, carried in the broadcast payload \\
+Can a viewer act before the trader is filled & Only through ordinary transaction-ordering means & Yes; that is the mechanism's purpose \\
+\bottomrule
+\end{tabularx}
+\caption{Intent exposure at execution. The row that carries the argument is the second: the
+two venues do not merely differ in timing, they differ in how much of a belief is
+recoverable from what they expose.}
+\label{tab:execflow}
+\end{table}
+
+On Delphi, a trade is an on-chain transaction against a pari-mutuel cost function. It
+changes the share supply and therefore the quoted price, so other participants learn from
+the price movement after the position is established. What they observe is aggregated: the
+price reflects the net of everything traded, and a single trader's belief is recoverable
+only to the extent that their trade moved the price. This is not an absence of a strategic
+surface. On-chain execution carries the ordinary transaction-ordering surface that the MEV
+literature describes, in which a party able to sequence or observe pending transactions can
+act on them before they are included \cite{daian2019flashboys,ethereummev}. The point is
+narrower: Delphi does not add a pre-trade disclosure channel of its own on top of that.
+
+On Sapience the disclosure is deliberate, complete, and prior to any fill. Three properties
+of the broadcast, established from the protocol's own documentation and implementation, are
+load-bearing for the rest of this report.
+
+First, the broadcast is unfiltered. The relayer's handler context declares a function
+returning all connected clients, annotated in the source as being used for the global
+auction broadcast, and the broadcast loop iterates every open connection with no
+subscription requirement, no responder allowlist and no filtering
+\cite{sapience2026relayer}. The endpoint is public and documented in the protocol's builder guide
+\cite{sapience2026builderguide}, which states that the relayer broadcasts the auction to
+every connected client and describes the counterparty role as one that watches every
+auction.
+
+Second, the payload is rich. The broadcast structure carries the full array of picks, each
+of which names a condition and the predicted outcome for it; the predictor's collateral,
+which is the position size; and the predictor's address \cite{sapience2026relayer}. A
+responder therefore observes the direction of every leg of a compound forecast, the stake
+behind it, and an address, so that repeated use of the same address permits longitudinal
+linking of one participant's requests.
+
+Third, the mechanism offers no way to disclose less and still trade. The intent signature is
+optional at the protocol level, but the documentation states that vault counterparties
+respond with actionable bids only to signed requests, and that unsigned requests should be
+treated as price discovery only \cite{sapience2026builderguide}. A forecaster who wants a
+fill on a given request must disclose that request in full. This is a claim about a single
+request and not about a trading strategy: a forecaster may still split a position across
+several smaller requests, which discloses less per request at the cost of executing in
+pieces. What is unavailable is a priced option to reveal a coarser version of the request
+one is actually making.
+
+\subsection{What follows, and what does not}
+
+It would be easy, and wrong, to describe this as a privileged information channel. Access to
+the stream is not permissioned. Any client that opens a WebSocket connection receives every
+auction, so the advantage available from watching order flow attaches to the capital and
+infrastructure needed to quote on it rather than to occupying a protected role. This
+observation cuts against the simplest version of the argument this report makes, and
+Chapter~\ref{ch:evaluation} treats it as a finding rather than as an inconvenience.
+
+What the design does supply cheaply is linkability. Because an address appears in every
+broadcast, any observer can accumulate a per-address history at no cost and from no
+privileged position. One qualification is owed immediately: nothing compels a forecaster to
+reuse an address, so continuity is available to an observer rather than imposed on a
+discloser. Rotation is not free, since an address that has no history also has no standing
+with the vaults quoting on it, but the cost is a matter of reputation rather than of
+protocol, and the accumulation argument should be read as conditional on a forecaster who
+does not rotate. Whether such accumulation converts into an advantage that competitive
+quoting does not compensate is a separate question, which this report argues rather than
+demonstrates; the simulator of Chapter~\ref{ch:method} models exposure and not cross-event
+learning, and Chapter~\ref{ch:evaluation} is explicit about that boundary.
+
+Finally, none of this is concealed by the protocol. Sapience's trust model addresses custody, forgery and
+contractual authority. It does not consider what responders learn from observing requests. That is a category the trust model
+does not model, rather than a flaw it hides, and this report treats it as an unmodelled
+surface. The distinction matters for how the finding should be read and it matters ethically, a point set out in Section~\ref{sec:ethics-intro}.
+
+\section{Information flow at resolution}
+\label{sec:resflow}
+
+Both protocols must convert a real-world state of affairs into a payout, and both delegate
+that conversion. They delegate it to different parties, with different failure
+characteristics.
+
+On Delphi the specification originates with the market creator, who also holds a position in
+the market. In the design Gensyn documented in May 2026, the creator defined the outcomes
+and the data sources, wrote the settlement prompt within a category template, and selected
+the settling model from a curated list \cite{gensyn2026delphi}. Whether prompt authorship
+and model selection remain with the creator under the automated-settlement deployment could
+not be established: Gensyn's current documentation describes no settlement mechanism, no
+oracle and no prompt authorship, and the SDK pages consulted for this report are silent on
+all three \cite{gensyn2026sdk}. The analysis below therefore concerns specification power
+as a structural feature of creator-defined markets, and does not assert who exercises it
+today. Each of the outcomes, the data sources, the prompt and the model is a degree of
+freedom that shapes the resolved outcome without any of them constituting misbehaviour. A settlement question written in good
+faith still embeds a reading of the event, and this report reads Gensyn's own observation, that vague
+prompts are the cheapest route to a wrong settlement, as consistent with the specification
+being where the outcome is decided.
+
+On Sapience the specification is fixed when the market is created, and the contested step is
+the assertion. The deployer asserts an outcome under bond; a challenger may contest it under
+an equal bond; a disputed question is decided by a token-weighted vote
+\cite{sapience2026relayer,uma2026oracle}. The mechanism prices the act of asserting
+falsely, which is a real protection against cheap misassertion.
+
+The two designs are also each other's stated alternative, which is worth noting because the
+critique is first-party rather than this report's. Gensyn's reasoning for rejecting an
+optimistic oracle, recorded in Section~\ref{sec:delphi}, is that such designs are slow by
+construction and capital-inefficient at the long tail \cite{gensyn2026delphi}. Sapience
+settles through exactly that mechanism. Neither party is disinterested, and the point is not
+that one is right, but that each protocol's designers regard the other's resolution choice
+as carrying a cost they were unwilling to pay.
+
+The two failure modes are close to mirror images. A Delphi settlement that turns on an
+ambiguous specification fails silently, quickly and cheaply: a model reads the prompt,
+returns an answer, and the market pays out, with the ambiguity visible only to a participant
+who reads the prompt and disagrees with it. A Sapience settlement that turns on an ambiguous
+specification fails loudly, slowly and expensively: someone must post a bond, wait out the
+liveness period, and win a vote. Neither mechanism removes the ambiguity. One absorbs it
+without friction and the other converts it into a costly contest.
+
+\subsection{An argument about optimistic-oracle voting}
+\label{sec:umaargument}
+
+The following is this report's own argument about a documented mechanism, not a reported
+result, and it is labelled as such because no independent scholarly treatment of the point
+was located. The claim that optimistic-oracle voters are incentivised to vote with the
+expected majority rather than with the truth is widely repeated and, so far as could be
+established, rarely sourced. Rather than cite an authority that does not exist, the argument
+is made here from UMA's own description of the mechanism.
+
+A vote that pays for agreement with the resolved majority is a coordination device. Such a
+device tracks truth for exactly as long as the truth is the obvious thing for other voters
+to choose. On a question whose wording is unambiguous, it is; the correct answer is the
+natural focal point and the mechanism works as intended. On a question whose wording is
+genuinely contested, the focal point is whatever voters expect other voters to select, and
+there is no guarantee that this coincides with the best reading of the specification. UMA's
+defences are well designed against the failure they target: secret ballots frustrate
+copying and coordination, a sixty-five per cent threshold raises the share of stake an
+attacker must control, and the delay on unstaking exposes an attacker to the depreciation
+their own attack would cause \cite{uma2026oracle}. Each of these makes it harder for voters
+to agree on a falsehood. None of them makes it easier for voters to agree on a meaning. The
+residual is not dishonesty and it is not capture; it is ambiguity, and the mechanism has no
+instrument that addresses it.
+
+\section{Threat models}
+\label{sec:threat}
+
+The two preceding sections traced what each protocol exposes. This one asks who is in a
+position to act on it, and what the protocol does about that. Table~\ref{tab:threat} lists
+only the actors whose powers are not already covered by Sections~\ref{sec:execflow}
+and~\ref{sec:resflow}; traders, ordinary observers and dispute voters are omitted because
+their positions were established there. The table is descriptive, and naming a power is not
+an allegation that anyone exercises it.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.15\textwidth}p{0.21\textwidth}p{0.27\textwidth}X}
+\toprule
+\textbf{Actor} & \textbf{Power held} & \textbf{Constrained by} & \textbf{Not constrained} \\
+\midrule
+\multicolumn{4}{l}{\emph{Delphi}} \\
+Market creator & Defines outcomes, data sources, settlement prompt and model; holds a position & Category templates; abuse filter; non-upgradeable market contract & Whether the specification is a neutral rendering of the question \\
+Settlement operator & Executes the settlement call & Reproducible receipts on that tier; under automated settlement, gateways the creator does not operate & Model choice, timing, and any external source the judge reads \\
+\midrule
+\multicolumn{4}{l}{\emph{Sapience}} \\
+Relayer & Routes messages & Cannot forge bids, alter sizes or take custody; signatures verified on-chain & Observes complete order flow \\
+Responder or vault & Quotes on observed requests & Signature verification; the predictor's freedom to reject a bid & What it learns from the request, and from linking requests by predictor address \\
+Market deployer & Asserts the resolution under bond & Bond, challenge window, dispute vote & Whether the specification was neutral \\
+\bottomrule
+\end{tabularx}
+\caption{Actors whose powers are not fully covered by the information-flow analysis. The
+final column is where the argument lives.}
+\label{tab:threat}
+\end{table}
+
+Read down the third column and the protocols look well defended, because they are. Every
+constraint listed is real, most are enforced on-chain or cryptographically, and between them
+they close the failures a designer would name first: a relayer that forges bids, an operator
+that substitutes a settlement result, a deployer that asserts a false outcome without cost,
+a creator who rewrites a market after people have traded it.
+
+Read down the fourth column and a pattern appears that neither protocol's documentation
+draws attention to. The unconstrained powers are not failures of enforcement. They are
+things the enforcement was never aimed at, and they divide into two kinds.
+
+The first kind is observation. The relayer cannot steal, forge or alter, and it sees every
+request; a responder is bound by signature verification and by the predictor's freedom to
+walk away, and it learns whatever the request contains. Sapience's trust model is accurate
+about custody, forgery and authority, and simply does not treat observation as a harm to be
+modelled. That is a category the model omits rather than a flaw it conceals, which is why
+Section~\ref{sec:execflow} describes it as an unmodelled surface.
+
+The second kind is specification. A Delphi market creator holds a position and writes the
+criteria that decide it; a Sapience deployer asserts an outcome under a specification fixed
+earlier. The constraints in both cases operate on execution and on assertion, and neither
+touches the content of the specification itself.
+
+What the two kinds have in common is that no participant exercising them is misbehaving. A
+responder pricing a request it was sent is doing the job the mechanism created for it. A
+creator writing a settlement prompt is doing what the platform asks. The protections
+enumerated in the third column are aimed at dishonesty, and both residuals survive them
+because neither residual is dishonesty. Section~\ref{sec:threelayer} takes up the second of
+them, which is the more tractable to state precisely.
+
+\section{Three verification properties, and what each bounds}
+\label{sec:threelayer}
+
+Verifiability is not one property. This section separates the properties that the mechanisms
+described above actually deliver, because they answer different failure modes and are not
+interchangeable. The separation is this report's analytical device rather than a reported
+finding, and it is the chapter's principal contribution.
+
+\subsection*{Reproducibility: did this model, on these inputs, produce this output?}
+
+Reproducibility is delivered by rerunning an open-source model inside a controlled
+environment and comparing the result. It bounds divergence between runs, and it converts a
+settlement from an assertion into a computation a third party can repeat.
+
+Gensyn are precise about where it stops. A receipt proves that a given model produced a
+given output from a given prompt, and does not verify that the information in the prompt is
+accurate; and receipts do not execute tools, so they do not prove that an external tool
+returned accurate, complete or unchanged data \cite{gensyn2026receipts}. The second
+limitation is not marginal for a settlement judge whose entire task is reading real-world
+sources: it means the guarantee covers the reasoning and not the evidence.
+
+\subsection*{Execution attestation: did this call actually happen as described?}
+
+Attestation is delivered by executing a model call inside a trusted execution environment
+and attesting the transcript on a system outside the application's control. It
+bounds prompt substitution, selection among responses, and retrying until a preferred answer
+returns.
+
+It is the necessary instrument for closed frontier models, and the reason is technical
+rather than philosophical. Such models are non-deterministic: calling one a second time with
+the same prompt generally yields a different answer, so an inference cannot be proved after
+the fact by repeating the call \cite{truebit2026orchestration}. Reproducibility is therefore
+available for open models under a controlled environment, and attestation is the
+corresponding answer for closed ones, whose outputs can be witnessed but not re-derived. A
+stack offering one is not thereby offering the other, and this is the point at which
+treating verifiability as a single property produces a wrong conclusion about what a
+deployment guarantees.
+
+\subsection*{Semantic validity: was the question a fair rendering of the event?}
+
+Semantic validity asks whether the question, the evidence and the resolution criterion were
+a fair and unambiguous rendering of what happened. Both protocols do address it, and it
+would be wrong to say otherwise: Delphi supplies category-aware templates, definitions and
+edge-case prompts, and screens questions; Sapience fixes the specification before trading
+and lets a bonded challenger contest an assertion made under it. These are real instruments
+and they improve specifications.
+
+\textbf{What no mechanism in either protocol does is guarantee semantic validity, and
+verification in particular cannot.} That is not an omission in either protocol's
+engineering; it is a statement about what verification is. Reproducibility and attestation
+are both claims about a computation, and semantic validity is a claim about meaning.
+Establishing that a procedure ran exactly as committed says nothing about whether the
+committed procedure was the right one, and no amount of further verification changes that,
+because the residual is not of the same kind as the thing being verified. Templates and
+dispute processes reduce the residual; they do not close it, and neither is a verification
+mechanism in the sense the other two rows of Table~\ref{tab:threelayer} use the word.
+
+Table~\ref{tab:threelayer} summarises the three.
+
+\begin{table}[htbp]
+\centering
+\begin{tabularx}{\textwidth}{p{0.26\textwidth}p{0.28\textwidth}X}
+\toprule
+\textbf{Property} & \textbf{Mechanism} & \textbf{What it leaves open} \\
+\midrule
+Reproducibility & Rerun an open model in a controlled environment & Whether the prompt was accurate, and whether external sources were \\
+Execution attestation & TEE-executed call, transcript attested off the operator's infrastructure & Whether the committed specification was neutral \\
+Semantic validity & Specification templates, precommitted criteria, and bonded contestation. \textbf{No verification mechanism} & Whether a reading is the uniquely correct one; the residual is reduced, not closed \\
+\bottomrule
+\end{tabularx}
+\caption{The three properties in summary; the argument is in the text above. The third row is
+the chapter's central observation: semantic validity is addressed by procedure and never by
+verification, so it is the one property the other two mechanisms cannot deliver.}
+\label{tab:threelayer}
+\end{table}
+
+\subsection*{Attested execution in practice}
+
+Truebit describe an unnamed permissionless AI-settled prediction-market deployment in which
+a dynamic oracle detects a market entering settlement and triggers the workflow without a
+manual trigger, settlement calls to frontier models run inside a trusted execution
+environment with the exact prompt and response captured in an attested transcript on
+a system outside the application's control, and deterministic logic then runs
+across multiple verifier nodes, with each step producing a receipt
+\cite{truebit2026orchestration}. The threat they name as the motivation is precisely the one
+this chapter has been tracing: whether the party with the most at stake in an outcome could
+have shaped it, by adjusting a prompt, selecting among responses, or retrying until a
+preferred answer returned \cite{truebit2026orchestration}.
+
+Two things must be said carefully. The first is identification. The Truebit case study does
+not name Delphi or Gensyn, and Gensyn's documentation does not name Truebit: the settlement
+methods page names no oracle relayer and describes no settlement mechanism at all
+\cite{gensyn2026sdk,truebit2026orchestration}. Truebit's description is consistent with an
+automated settlement path of the kind Gensyn's SDK routes to, but since Gensyn document no
+settlement mechanism there is nothing on their side to compare it against, so no
+correspondence can be established and this report does not assert one.
+
+The second is what attestation achieves. Attestation mitigates execution-time manipulation
+of a committed resolution procedure. It does not establish that the underlying market
+specification is semantically neutral. On Truebit's own description of the workload, the
+creator still defines the market's outcomes and data sources, which is specification power
+exercised before any execution occurs and therefore untouched by any guarantee about how
+that execution proceeded \cite{truebit2026orchestration}.
+
+\section{Delphi's evolution as evidence for the framework}
+\label{sec:evolution}
+
+The separation set out above is not only analytical. Delphi has moved along it, and Gensyn's
+own documentation records the move. Under the arrangement documented in May 2026 the
+settling party held both semantic and execution discretion. Under automated-settlement
+gateways the creator no longer executes the settlement, and Gensyn publish nothing to
+indicate that specification discretion moved with it. What first-party sources establish is
+the removal, not what remains: the current settlement procedure, prompt authorship and model
+selection are not described anywhere in Gensyn's documentation, as
+Section~\ref{sec:delphi} records.
+
+
+The three settlement tiers of Section~\ref{sec:delphi} are concurrent options rather than
+successive designs: Gensyn describe them as a path that lets the creator trade speed for
+verifiability \cite{gensyn2026delphi}. Reproducible execution was therefore available
+\emph{within} the creator-defined arrangement rather than replacing it, which is why it
+appears as a property in this chapter and not as a period.
+
+What the sources do establish is the transition between the two rows. Gensyn's SDK
+documentation states that testnet and mainnet use automated-settlement gateways by default,
+that some legacy markets remain on the earlier deployment, and that automated settlement
+changed gateway addresses and market routing \cite{gensyn2026sdk}. Gensyn do not quantify
+what share of markets remains on the earlier deployment, and this report does not estimate
+it. The direction of travel is from settlement the creator executed to settlement the
+creator does not execute.
+
+A third architecture is documented in the same period, and it is worth setting beside these
+two without being folded into them. Truebit describe a deployment in which settlement calls
+to frontier models run inside a trusted execution environment with the prompt and response
+captured in an attested transcript on a system outside the application's control, and
+contrast it with markets that rely on a whitelisted set of trusted creators
+who run the settlement model themselves, which they characterise as a reasonable way to
+bootstrap a platform and not a way to scale one \cite{truebit2026orchestration}. That
+client is unnamed, and Gensyn's documentation describes no settlement mechanism against
+which the description could be matched, so the attested architecture is treated here as a
+documented design point of the same period rather than as Delphi's own third state.
+
+The reading this report takes is that the change removes a genuine class of privilege, and
+that it is a serious engineering response to a real threat rather than a concession that
+something was wrong.
+
+What makes the sequence analytically useful is what survives it. In both documented states
+the settling arrangement leaves semantic discretion somewhere, because somebody must decide
+what the question means, which sources count as evidence, and what will be treated as the
+criterion for resolution. Removing the creator's execution discretion does not touch that,
+and neither would attestation, because verification is a statement about a computation and
+the residual is a statement about a specification.
+
+The claim that the evolution is \emph{evidence} for the separation, rather than merely an
+instance of it, rests on one point and it is worth stating rather than assuming. The
+framework was not imposed on the sequence: a designer with every incentive to close the
+whole problem closed execution discretion and published nothing to indicate that
+specification discretion was closed with it. That is an argument from silence, and the
+silence has a competing explanation, since Gensyn document no settlement mechanism at all;
+but the choice that is documented was made independently of this report's categories, and
+it is what gives the sequence purchase beyond restating them.
+
+This is the sense in which the chapter's title should be read. Delphi and Sapience relocate
+strategic informational advantage rather than eliminating it. At execution, Delphi's
+pari-mutuel pool relocates it to post-trade inference and the ordinary transaction-ordering
+surface, while Sapience's request-for-quote auction relocates it to a pre-trade broadcast
+that is complete, address-linked and unpriced. At resolution, Delphi relocates it into a
+specification interpreted by a machine under strengthening execution guarantees, while
+Sapience relocates it into a bonded assertion contested by a coordination mechanism. In all
+four cases the mechanism that works is aimed at dishonesty, and what remains after it has
+worked is meaning.
+
+\section{What this chapter established}
+
+This chapter established the following, and it is worth separating what was read from what
+was reasoned. ``Demonstrated'' is reserved throughout this report for what the experiment
+measures; what a document states is \emph{established}, which is a different act.
+
+Established from primary sources:
+
+\begin{itemize}
+  \item Delphi prices with a dynamic pari-mutuel cost function in production, while a
+    separate agent-competition deployment uses a logarithmic scoring rule.
+  \item In the design Gensyn documented in May 2026, market creators defined the outcomes,
+    data sources, settlement prompt and settling model while holding a position.
+  \item Delphi has since migrated to automated-settlement gateways, with some legacy markets
+    remaining on the earlier deployment.
+  \item The Sapience relayer broadcasts each request to every connected client, carrying the
+    complete pick set with the predicted outcome on each leg, the position size and the
+    predictor's address, and offering no partial-disclosure path to anyone intending to trade.
+\end{itemize}
+
+Argued, not demonstrated:
+
+\begin{itemize}
+  \item That access to the Sapience broadcast is unpermissioned, so the resulting advantage
+    attaches to capital and infrastructure rather than to a protected role.
+  \item That an address in every broadcast makes accumulation cheap. This does not
+    establish that accumulation converts into uncompensated advantage.
+  \item That optimistic-oracle voting is a coordination device whose defences target
+    dishonesty and not ambiguity.
+  \item That semantic validity, reproducibility and execution attestation are three
+    properties, of which neither protocol's verification machinery guarantees the first.
+\end{itemize}
+
+Not established, and stated as such: whether prompt authorship and model selection remain
+with the creator under the automated-settlement deployment, on which Gensyn's current
+documentation is silent. Neither gap is bridged by inference here. Gensyn also do not
+quantify how many markets remain on the legacy deployment, and no estimate is offered.
+
+Chapter~\ref{ch:method} takes the pre-trade disclosure identified in
+Section~\ref{sec:execflow} and asks what it is worth, by measuring the surplus that moves
+when responders may condition on an observed request against a benchmark in which they may
+not.

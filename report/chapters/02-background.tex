@@ -1,0 +1,377 @@
+\chapter{Background and Literature Review}
+\label{ch:background}
+
+This chapter assembles the material the rest of the report depends on. It begins with
+maximal extractable value and the order-flow auctions built to contain it
+(Section~\ref{sec:bg-mev}), then turns to market microstructure and adverse selection
+(Section~\ref{sec:bg-micro}), which is where the definition adopted in
+Chapter~\ref{ch:introduction} earns its keep and without which this project's central
+question cannot be posed properly. It reviews scoring rules and information aggregation
+(Section~\ref{sec:bg-scoring}), the empirical literature on prediction-market inconsistency
+(Section~\ref{sec:bg-arb}), optimistic oracles (Section~\ref{sec:bg-oracles}), and
+verifiable and attested execution (Section~\ref{sec:bg-verif}). It distinguishes strategic
+behaviour from Byzantine failure (Section~\ref{sec:bg-byz}), surveys the venues where
+agentic forecasting now happens (Section~\ref{sec:bg-landscape}), and closes with the gap
+this project addresses (Section~\ref{sec:bg-gap}).
+
+Some of this material is carried forward from the interim report submitted in July 2026,
+which is permitted. The distributed-training literature that formed the bulk of that
+report's background has been removed rather than retained, for the reason given in
+Section~\ref{sec:intro-change}.
+
+\section{Maximal extractable value and order-flow auctions}
+\label{sec:bg-mev}
+
+Maximal extractable value is the value that can be extracted from block production beyond
+normal rewards and fees, by including, excluding or reordering transactions
+\cite{ethereummev}. Daian et al.\ established the phenomenon empirically, showing that
+decentralised exchange arbitrage and priority gas auctions produced measurable profit and
+consensus-layer risk \cite{daian2019flashboys}. Later work generalises it as a consequence
+of temporary monopoly power, in which a party with ordering or censorship power extracts
+value from users' exposed intentions \cite{chitra2023uncertainty}.
+
+Two features of that literature matter here. The first is that MEV depends on a privileged
+protocol position rather than on ordinary profit: the ability to sequence, filter or observe
+how other participants' actions are processed. The second is that the exposure of intention
+is the mechanism. A transaction sitting in a public mempool is a disclosed intention that
+has not yet been executed, and the entire extraction surface follows from that gap.
+
+Order-flow auctions are the design response. Rather than exposing a user's transaction to
+everyone, the user submits it to an auction in which searchers bid for the right to
+transact alongside it, and the user receives a share of the resulting value. The design
+problem is immediately informational: searchers need enough information to bid usefully, and
+every disclosure that helps them bid also helps them exploit. Passerat-Palmbach and Wadhwa
+address this directly for MEV-Share, introducing differentially private aggregate hints so
+that a user can quantify the privacy lost to searchers and price a rebate against it
+\cite{passeratpalmbach2025dphints}. Their framing is the one this project adopts: disclosure
+is a quantity that can be measured and traded off, rather than a binary property.
+
+The connection to the present work is that a request-for-quote prediction market is
+structurally an order-flow auction whose order flow is a forecast. The forecaster's request
+is a disclosed intention that has not yet been executed, competing responders bid for it,
+and the same tension between useful and exploitable disclosure applies. What differs is the
+traded object, taken up in Section~\ref{sec:bg-gap}.
+
+The working definition this project adopts also comes from this community. At the agentic
+MEV breakout group at MEV-SBC in July 2026, the definition used was broad: MEV is any
+information asymmetry leveraged for advantage in a system, not a blockchain-specific
+phenomenon, with arbitrage as one instantiation, and the operative question being who
+obtains systematic access to capture it \cite{mevsbc2026breakout}.
+Chapter~\ref{ch:introduction} narrows that considerably, because a definition that broad
+would classify ordinary market making as MEV.
+
+\section{Market microstructure and adverse selection}
+\label{sec:bg-micro}
+
+Glosten and Milgrom model a specialist quoting to a stream of traders, some informed and
+some not \cite{glosten1985bidask}. The specialist cannot tell which is which, but knows that
+a trade against an informed counterparty loses money in expectation. It therefore quotes a
+spread wide enough that gains from uninformed traders offset losses to informed ones. The
+spread is not a fee and not extraction; it is the price of quoting into a population that
+includes better-informed participants. Kyle models the complementary case, an informed
+trader choosing how much to trade against a market maker who observes only aggregate order
+flow, and shows that the informed trader's advantage is bounded by how much the market maker
+can infer from what it sees \cite{kyle1985continuous}.
+
+Both results say the same thing from opposite ends: a market maker who can condition on
+information about an order will price closer to that order's true value, and the informed
+party's surplus falls accordingly. That is adverse selection; it is among the most
+thoroughly established results in the field, and it is a feature of functioning markets
+rather than a defect in them. Any claim that a mechanism extracts value from informed
+traders must therefore establish that it does something beyond this.
+
+This is precisely why Chapter~\ref{ch:introduction}'s definition excludes ordinary
+competitive compensation for risk borne, and why Chapter~\ref{ch:results} treats the sign of
+the disclosure effect as a validity check rather than as a finding. A simulator that
+demonstrated informed-trader surplus falling when market makers learn more would have
+demonstrated Glosten and Milgrom, not anything about prediction markets. The interesting
+questions are all about magnitude, shape and mechanism design.
+
+Those two models are not, however, the closest existing treatment of the mechanism this
+report studies. Both concern a market maker facing anonymous or aggregated flow. A
+request-for-quote market is different in a way that has been studied directly: a client
+reveals a trading intention to several dealers at once and trades with at most one, so the
+dealers who do not win have been told something for nothing. Duffie, G\^{a}rleanu and
+Pedersen model the search that precedes such a trade and show how bid-ask spreads narrow as
+investors reach more marketmakers \cite{duffie2005otc}. Hendershott and Madhavan study the
+resulting trade-off empirically in corporate bonds, and state it in terms this report could
+have used: ``contacting more dealers will generate more responses resulting in better prices
+but greater information leakage regarding trading intentions'' \cite{hendershott2015click}.
+They find the number of dealers queried falls as trade size rises, and auctions are run
+shorter for larger and less liquid trades, both consistent with leakage increasing in
+exposure.
+
+That literature anticipates the tension the experiment of Chapter~\ref{ch:method} measures,
+and it would be wrong to present the tension as new. What it does not anticipate is the
+setting. In a dealer market the client chooses the panel and chooses its size, so the number
+of parties told is a decision variable the client actively manages against price; the
+empirical finding is precisely that clients manage it. On the venue studied here the request
+reaches every connected client, the sender does not choose the recipients or their number,
+and there is no smaller panel available at a worse price. The disclosure is also of a
+different object: a dealer learns that someone wants to trade a security, whereas a
+broadcast request states a belief about an event, which is the product the market exists to
+elicit. The contribution this report can claim is therefore not the tension but its
+behaviour when the client's control over the panel is removed, and
+Section~\ref{sec:bg-gap} states the gap on that narrower basis.
+
+A recent line of work brings the two literatures together by asking what happens when the
+market maker's observation is deliberately degraded. Nakamura derives a closed-form spread
+and welfare decomposition for the Glosten-Milgrom model when the market maker observes trade
+direction through a noisy binary channel, identifying a per-trade transfer from the
+protocol's liquidity pool to traders \cite{nakamura2026privacysubsidy}, with a
+continuous-time treatment of the Kyle setting \cite{nakamura2026kyle}. Both are unrefereed
+preprints and both model a single committed market maker rather than competing responders,
+which limits how far they transfer to the setting studied here; they are the nearest
+analytic neighbours to Chapter~\ref{ch:method}'s experiment and are compared with it in
+Section~\ref{sec:related}.
+
+\section{Scoring rules and information aggregation}
+\label{sec:bg-scoring}
+
+The classical argument for prediction markets is that prices aggregate dispersed private
+information into forecasts of uncertain events \cite{wolfers2004prediction}. Market scoring
+rules formalise this by linking probability reports to proper scoring rules, so that a
+participant is rewarded for moving the current estimate towards a better calibrated belief;
+Hanson's logarithmic market scoring rule is the canonical construction. It acts as a
+continuous automatic market maker with which any number of agents may interact any number of
+times, at no additional cost over the last interaction alone. The market maker's maximum
+expected payment is bounded, by the entropy of the initial distribution scaled by the
+liquidity parameter \cite{hanson2007lmsr}.
+
+The cost of that guarantee is that somebody funds the subsidy. Pari-mutuel designs take the
+opposite approach: all stakes enter a pool and payouts are funded entirely from it, so the
+operator bears no risk, at the cost that a classical pari-mutuel market quotes only a single
+price at close and gives an early trader nothing to price against. Pennock's dynamic
+pari-mutuel market resolves this, keeping pool-funded payouts while quoting a continuous
+price derived from the money wagered on each outcome and the shares outstanding against it
+\cite{pennock2004dpm}. This is the
+mechanism Delphi uses, and Chapter~\ref{ch:protocols} treats the choice as consequential
+rather than incidental: a design that requires no subsidising market maker also has no
+counterparty who must be protected from informed flow, which relocates where informational
+advantage can appear.
+
+Both designs share a feature the rest of this report depends on. The designer must specify
+the event, the action space, what participants can observe, the update rule, and the
+resolution criterion. Each choice affects both forecast quality and strategic behaviour, so
+a prediction market is a mechanism-design object before it is an aggregation device.
+
+\section{Prediction-market arbitrage and semantic non-fungibility}
+\label{sec:bg-arb}
+
+Empirical work shows that real prediction platforms exhibit structural inconsistencies that
+have nothing to do with anyone forecasting better. Saguillo et al.\ study arbitrage in
+dependent prediction markets and distinguish within-market rebalancing from combinatorial
+inconsistencies across related conditions \cite{saguillo2025forest}. Gebele and Matthes
+analyse semantic non-fungibility, in which economically equivalent events are listed
+separately because they differ in wording, venue, temporal scope or resolution detail;
+across more than one hundred thousand events they find roughly six per cent appearing
+concurrently on multiple platforms, with prices diverging by two to four per cent on average
+\cite{gebele2026semantic}.
+
+The significance for this project is that both papers locate value in the institutional
+structure around a forecast rather than in the forecast itself. A participant does not need
+better knowledge of the world if the mechanism exposes inconsistent event definitions or
+ambiguous resolution criteria. That observation is the direct ancestor of the distinction
+this report adopts, between \emph{epistemic reward}, earned by improving the
+system's estimate, and \emph{mechanism-mediated information rent}, earned from how the event,
+the scoring rule or the resolver has been specified. In a well-designed system the two
+coincide. Chapter~\ref{ch:protocols} asks where they come apart.
+
+\section{Optimistic oracles}
+\label{sec:bg-oracles}
+
+An optimistic oracle resolves a question by assuming an assertion is true unless it is
+challenged. A proposer asserts an outcome and posts a bond; during a liveness window anyone
+may dispute by posting a bond of their own; an undisputed assertion settles, and a disputed
+one goes to a vote. UMA's implementation, which Sapience uses, resolves disputes by a vote of
+stakers in a twenty-four-hour commit phase followed by a twenty-four-hour reveal phase, with
+a dispute resolving when at least sixty-five per cent of staked UMA is cast for a single
+outcome; slashing and rewards are described as incentivising stakers to vote for the most
+correct answer, and secret ballots as preventing voters from copying one another or
+coordinating on an incorrect result \cite{uma2026oracle}.
+
+The design is economically elegant for the failure it targets, which is cheap misassertion.
+It prices the act of asserting falsely and it makes coordinated dishonesty expensive.
+Chapter~\ref{ch:protocols} argues, from the documented mechanism rather than from any
+secondary source, that this leaves a different failure untouched: a mechanism that pays for
+agreement with the resolved majority is a coordination device, and on a question whose
+wording is genuinely contested the focal point need not be the best reading of the
+specification. No independent scholarly treatment of that point was located during this
+project, and the argument is therefore presented in Chapter~\ref{ch:protocols} as the
+report's own reasoning rather than as a reported finding.
+
+\section{Verifiable, reproducible and attested execution}
+\label{sec:bg-verif}
+
+When the resolver is a model rather than a person, the question of whether the resolution
+was performed honestly becomes a question about a computation. Two distinct guarantees are
+available and they are not interchangeable.
+
+Reproducibility means that a computation can be rerun to obtain the same result. Gensyn's
+Reproducible Execution Environment produces a receipt for an inference performed by an
+open-source model, which a third party can rerun to verify the answer. Gensyn are explicit
+about the limits: a receipt proves that a given model produced a given output from a given
+prompt, and does not verify that the information in the prompt is accurate; and receipts do
+not execute tools, so they do not prove that an external tool returned accurate, complete or
+unchanged data \cite{gensyn2026receipts}.
+
+Attestation means that a computation demonstrably occurred as described, without the result
+being substituted. It is the necessary approach for commercial frontier models, which are
+non-deterministic: calling one a second time with the same prompt generally yields a
+different answer, so an inference cannot be proved after the fact by repeating the call
+\cite{truebit2026orchestration}. Executing the call inside a trusted execution environment
+and attesting the transcript on a system outside the application's control
+provides a guarantee that repetition cannot.
+
+Neither addresses whether the question being resolved was well specified.
+Chapter~\ref{ch:protocols} develops that separation, which is this report's principal
+analytical contribution.
+
+A separate literature asks how reliable language models are as judges, covering position and
+verbosity bias, sensitivity to prompt phrasing, and agreement with human raters on ambiguous
+items. It is not reviewed here, and the omission is deliberate rather than an oversight: the
+argument of Chapter~\ref{ch:protocols} is structural and does not depend on how reliable any
+judge is. It holds that verification establishes what a computation did and not whether the
+specification was sound, which would remain true of a judge that never erred. Empirical
+judge reliability bears on how often the residual bites, which this report does not attempt
+to estimate, and Chapter~\ref{ch:conclusions} lists measuring it as future work.
+
+Trusted execution also appears on the mitigation side. Conditional recall, proposed as
+credible forgetting, has an agent evaluate information inside an enclave and discard it if
+no deal results, so that information can be previewed without being retained
+\cite{mevsbc2026breakout}. Chapter~\ref{ch:evaluation} identifies this as the mitigation
+best targeted at the gap this project could not measure.
+
+\section{Strategic behaviour is not Byzantine failure}
+\label{sec:bg-byz}
+
+Distributed learning models malicious participants as Byzantine, able to send arbitrary
+messages, and robust aggregation rules aim to preserve convergence under a bounded fraction
+of them \cite{blanchard2017krum}. That framing is not the one this report needs. A Byzantine
+adversary tries to break a system; a strategic participant maximises its reward while
+remaining entirely within the rules. Every actor described in Chapter~\ref{ch:protocols} is
+of the second kind: a market maker that prices order flow it was designed to receive, a
+creator who writes a settlement prompt they are invited to write, a voter who votes for the
+outcome they expect to win. Robustness mechanisms do not address any of them. The analysis
+here is accordingly framed around what each protocol's rules make available to a participant
+acting within them, rather than around fault tolerance. This report does not apply formal
+mechanism-design theory and claims no result in it; the framing is descriptive.
+
+\section{The landscape of agentic forecasting}
+\label{sec:bg-landscape}
+
+Table~\ref{tab:landscape} places the two protocols studied here among the venues where
+forecasting is now performed or rewarded.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.16\textwidth}p{0.22\textwidth}p{0.22\textwidth}X}
+\toprule
+\textbf{Venue} & \textbf{Matching} & \textbf{Resolution} & \textbf{Intent exposure} \\
+\midrule
+Delphi & Dynamic pari-mutuel pool \cite{pennock2004dpm,gensyn2026delphi} & AI judge; creator-defined specification in the design documented May 2026, current procedure not documented \cite{gensyn2026delphi,gensyn2026sdk} & No pre-trade disclosure added; post-trade, through the price \\
+Sapience & RFQ auction, signed bids \cite{sapience2026relayer} & Optimistic oracle, bonded assertion \cite{uma2026oracle} & Pre-trade, broadcast in full \\
+Central limit order book (the familiar case) & Continuous double auction & Venue-specified; outside this report's scope & Pre-trade, as resting orders \\
+Bittensor forecasting subnets & Not a market; validators score submitted agents \cite{numinousgithub} & Scored against the market price seven days later, with the current price as the baseline to beat \cite{numinousgithub} & Submitted agents visible to validators \\
+\bottomrule
+\end{tabularx}
+\caption{Where a belief is exposed, and who decides what it was worth. The two rightmost
+columns are the axes this report studies; the venues differ on both, and the two studied
+here differ on both from each other.}
+\label{tab:landscape}
+\end{table}
+
+The order-book row is included as the familiar case rather than as a claim about any
+particular venue: a resting limit order discloses intent before execution, which is a
+long-understood cost of using a public book, and the disclosure is voluntary in a way an RFQ
+broadcast is not. Resolution at such venues varies and is not analysed here. Bittensor forecasting
+subnets are included as the non-market comparator, where rewards flow from validator scoring
+rather than from trading, and where empirical analysis of the network as a whole has found
+concentration in stake and reward that is not obviously explained by measured quality
+\cite{lui2025bittensor}. That
+finding is the closest existing evidence for the accumulation argument
+Chapter~\ref{ch:evaluation} makes and cannot measure.
+
+\subsection*{What ``agentic'' changes}
+
+The venues in the first two rows are not order books with bots attached, and it is worth
+being precise about what is different, because the difference is what makes the questions in
+this report distinct from ordinary microstructure.
+
+The first change is that agent participation is designed for rather than tolerated. Delphi's
+contracts do not distinguish humans from agents, and the same liquidity is available to both
+\cite{gensyn2026delphi}; a toolkit supplies skill files and scripts through which an agent
+can search markets, read implied probabilities, quote trades read-only, execute with slippage
+protection and redeem \cite{gensyn2026att}. Sapience goes further and treats the agent as the
+primary client: a skill file lets any agent supporting agent skills trade without further
+setup or an SDK, and a separate forecast surface lets
+a participant publish a belief that provides signal to the market without taking a position
+at all \cite{sapience2026docs}. Bittensor forecasting subnets take the furthest step, since
+what a participant submits is not a forecast but a forecasting agent, whose code is executed
+and scored by validators \cite{numinousgithub}.
+
+The second change follows from the first and is the one that matters here. Gensyn's stated
+rationale for agent participation is that agents make markets informative rather than merely
+liquid, moving prices toward true probability in the long tail where human attention is thin,
+and they describe AI judges resolving outcomes that AI traders priced as a closed loop in
+which machine intelligence both produces and consumes the signal \cite{gensyn2026delphi}.
+That description is accurate and it is also the reason this report exists. When the same
+class of system prices the belief and adjudicates the outcome, the two exposures identified
+in Section~\ref{sec:problem} stop being independent problems handled by different mechanisms
+and become properties of one pipeline. An asymmetry at either end is an asymmetry in what the
+market is for.
+
+A caution belongs with this, and it comes from the same community that supplied the working
+definition in Section~\ref{sec:bg-mev}. Participants there observed that agents in
+adversarial environments perform poorly, being trained to be helpful and correspondingly
+susceptible to misinformation \cite{mevsbc2026breakout}. That is a reported observation from
+a meeting rather than a measured result, and it is offered here as a caution rather than as
+evidence. A
+prediction market is an adversarial environment by construction. Both of the properties that
+make these venues interesting, that agents can be deployed at scale and that a model decides
+what happened, therefore come with a failure mode that neither protocol's verification
+machinery addresses, and Chapter~\ref{ch:protocols} takes up the second of them in detail.
+
+\section{Positioning and gap analysis}
+\label{sec:bg-gap}
+
+Five literatures bear on this project and none of them covers it.
+
+Microstructure explains what happens when a market maker learns about an informed order, and
+does so with far more generality than any simulation could. Its request-for-quote branch
+goes further and prices the trade-off directly, showing that clients trade execution quality
+against leakage by choosing how many dealers to query \cite{hendershott2015click}. What that
+work does not cover is the case where the choice is absent: a panel the sender cannot
+select or bound, and a disclosed object that is a probability rather than a security.
+
+Order-flow auction research addresses disclosure directly and supplies the instrument for
+pricing it \cite{passeratpalmbach2025dphints}, but it concerns transaction order flow, where
+the disclosed intent is an action on a public ledger. In a prediction market the disclosed
+intent is a belief, and the belief is the product.
+
+The prediction-market literature explains how inconsistency becomes exploitable, within a
+platform where related conditions are priced separately \cite{saguillo2025forest} and across
+platforms where equivalent events are listed apart \cite{gebele2026semantic}. It treats
+resolution as an exogenous fact about a venue rather than as a mechanism with its own
+strategic surface.
+
+The optimistic-oracle design supplies a resolution mechanism with a documented incentive
+structure \cite{uma2026oracle}, and it is the resolution boundary for one of the two
+protocols studied. Its documentation is precise about the failure it targets, cheap
+misassertion, and silent on the one this report is concerned with, contested meaning; no
+independent treatment of that silence was located, and Chapter~\ref{ch:protocols} supplies
+the argument itself.
+
+Verifiable computing supplies reproducibility and attestation for model execution
+\cite{gensyn2026receipts,truebit2026orchestration}. Gensyn are explicit that this does not
+establish whether the inputs to that execution were sound \cite{gensyn2026receipts};
+Truebit's account carries no equivalent statement.
+
+The gap is the conjunction. An AI-native prediction market exposes a belief twice, once at
+execution and once at resolution, and the two exposures have been studied separately and
+under different assumptions. I am not aware of work that asks what a verification stack
+does and does not close at the resolution boundary while also asking what a disclosure
+mechanism does at the execution boundary, for the same protocol, with the traded object a
+forecast in both cases. That conjunction is what Chapters~\ref{ch:protocols}
+to~\ref{ch:evaluation} address.

@@ -1,0 +1,291 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+
+This chapter states the problem, defines the term the report adjudicates, sets out the aim
+and objectives, lists the contributions, explains the change of direction since the interim
+report, and states the ethical boundary the work held.
+
+\section{Motivation}
+\label{sec:motivation}
+
+A prediction market pays people for being right about the future. To do that it must do two
+things that look administrative and are not. It must take a participant's belief and turn it
+into a position, and it must later decide what actually happened. Both steps require the
+belief to be exposed: once to whoever prices the position, and once to whoever judges the
+outcome.
+
+In a market where the participants and the resolver are human, those exposures are familiar
+and their costs are understood. A resting order on a public book tells other traders
+something; a resolution committee interprets a question and can be argued with. A new
+generation of prediction markets changes both ends at once. Forecasting agents submit
+positions programmatically, market makers are automated and always watching, and the party
+deciding what happened is increasingly a language model executing a procedure that somebody
+wrote in advance. Two protocols now running make opposite choices at both points. Delphi,
+built on Gensyn's infrastructure, matches against a pari-mutuel pool and settles by AI
+judgement. Sapience matches by broadcasting a request for quotes and resolves through a
+bonded optimistic oracle.
+
+This project asks a question that follows directly: when a market's traded object is a
+belief and its resolver is a model, where does strategic informational advantage sit, what
+is it worth, and what should it be called.
+
+\section{The problem: a belief exposed twice}
+\label{sec:problem}
+
+The two exposures have different characters and have been studied by different literatures.
+
+At execution, the question is what a participant reveals in order to trade, and to whom.
+This is the territory of market microstructure, where the standard result is that a market
+maker able to condition on an informed order will price closer to that order's true value,
+so the informed party's surplus falls \cite{glosten1985bidask,kyle1985continuous}. It is
+also the territory of maximal extractable value, where an exposed but unexecuted intention
+is the entire extraction surface \cite{daian2019flashboys,ethereummev}, and of the order-flow
+auctions built to contain it \cite{passeratpalmbach2025dphints}. A request-for-quote
+prediction market is structurally an order-flow auction whose order flow is a forecast.
+
+At resolution, the question is who decides what the question meant. When the resolver is a
+model, that decision is a computation, and a substantial engineering effort now goes into
+proving such computations were performed honestly, through reproducible execution
+environments and attested execution inside trusted hardware
+\cite{gensyn2026receipts,truebit2026orchestration}. This report argues that those mechanisms
+answer a question adjacent to the one that matters, and that the gap between them is where
+the interesting residual lives.
+
+I am not aware of work that studies the two exposures together for the same protocol, and
+Section~\ref{sec:bg-gap} states that gap on the basis of the literature reviewed there.
+
+\section{A working definition of AI-MEV}
+\label{sec:definition}
+
+The definition adopted at the agentic MEV breakout group at MEV-SBC in July 2026 was
+deliberately broad: MEV is any information asymmetry leveraged for advantage in a system,
+with arbitrage as one instantiation, and the operative question being who obtains systematic
+access to capture it \cite{mevsbc2026breakout}. That breadth is useful for framing and
+useless for adjudication, because it classifies ordinary market making as MEV. This report
+therefore narrows it. The prefix marks the setting rather than adding a criterion: the
+traded object is a belief and the resolver is a model, and it is those two facts, not any
+clause of the definition, that make the exposures studied here differ from their
+counterparts in a human market.
+
+\begin{quote}
+\textbf{AI-MEV} is value captured because of \textbf{role-specific protocol access} to
+information, timing, execution or resolution power, beyond what is attributable to
+forecasting ability or to ordinary competitive compensation for risk borne.
+\end{quote}
+
+The qualifier is load-bearing, and it is why Chapter~\ref{ch:evaluation} ends without a
+verdict rather than with one. A market maker that prices the information content of an order
+it was designed to receive is doing its job. That is adverse selection; it is among the best-established results in market
+microstructure \cite{glosten1985bidask}, and calling it extraction would be an error. Any
+claim that a mechanism extracts value from informed participants must show that it does
+something beyond charging them for being informed.
+
+Four conditions are used in Chapter~\ref{ch:evaluation} to decide whether a measured
+transfer qualifies:
+
+\begin{itemize}
+  \item \textbf{Asymmetric access.} Some parties see order flow that others do not, or see
+    it earlier.
+  \item \textbf{Accumulation.} A party observing a large share of flow builds an advantage
+    that no single competitive quote compensates.
+  \item \textbf{No priced option not to disclose.} The mechanism offers no way to trade
+    disclosure off against execution quality.
+  \item \textbf{Role-conditional.} The advantage attaches to occupying a protocol position
+    rather than to being a better forecaster.
+\end{itemize}
+
+\paragraph{How the conditions combine.} A test whose aggregation rule is unstated cannot
+adjudicate anything, so the rule is given here. The definition has two limbs: that the
+advantage arises from \emph{role-specific protocol access}, and that it exceeds \emph{what
+ordinary competitive compensation would provide}. The four conditions are two tests for each
+limb. Asymmetric access and role-conditionality bear on the first; accumulation and the
+absence of a priced option not to disclose bear on the second. A transfer qualifies as
+AI-MEV when at least one condition on each limb holds and the exclusion for risk
+compensation does not apply. Neither limb is sufficient alone: an advantage that is
+role-specific but fully compensated is a market maker's ordinary return, and an
+uncompensated advantage available to anyone is not protocol privilege.
+
+Where no condition holds on either limb, the transfer is ordinary adverse selection and this
+report says so. That outcome would be a legitimate result rather than a failure. Stating the
+rule also makes it possible for the report to fail to reach a verdict for a locatable
+reason, which is what happens in Section~\ref{sec:howmuch}.
+
+One difficulty in the first and fourth conditions should be admitted at the outset, because
+Chapter~\ref{ch:evaluation} runs into it and does not resolve it. Both conditions ask
+whether access or advantage is protocol-specific. Ethereum's public mempool is open to
+anyone who connects, and participation in the MEV that surrounds it is gated by capital and
+infrastructure rather than by permission; that is the canonical setting of the literature
+this project builds on \cite{daian2019flashboys,ethereummev}. So a reading of
+``role-specific protocol access'' strict enough to exclude capital-gated access to a public
+stream would exclude most of what MEV means in practice, while a reading permissive enough
+to include it makes the conditions weak. This report inherits that tension from the
+literature rather than introducing it, applies the conditions as stated, and reports which
+verdicts turn on it.
+
+Two terms are used at the point of adjudication and are defined here. \emph{Epistemic reward} is return attributable to
+forecasting ability: to knowing something about the world. \emph{Mechanism-mediated
+information rent} is return attributable to how the event, the matching rule or the resolver
+was specified. In a well-designed market the two coincide. This report is about the
+conditions under which they come apart.
+
+\section{Aim and objectives}
+\label{sec:aim}
+
+The aim of this project is to establish where strategic informational advantage arises in
+AI-native prediction markets, at both the execution and resolution boundaries, to measure
+what the execution-side advantage is worth under a controlled counterfactual, and to
+determine whether either advantage qualifies as AI-MEV under the definition above rather
+than as ordinary adverse selection.
+
+The aim decomposes into five objectives.
+
+\begin{itemize}
+  \item \textbf{Establish the mechanisms.} Determine, from primary documentation and
+    implementation source rather than from secondary description, what each protocol
+    discloses at execution, to whom, and at what moment; and what each delegates at
+    resolution, to whom, and under what constraint.
+  \item \textbf{Separate the verification properties.} Determine what the verification
+    machinery around AI settlement does and does not guarantee, and whether the guarantees
+    on offer are substitutes for one another.
+  \item \textbf{Measure the execution-side disclosure.} Quantify how much of an informed
+    forecaster's expected surplus moves when responders may condition on an observed
+    request, against a benchmark identical in every other respect, and establish how that
+    quantity varies with the competitive environment and with how much is disclosed.
+  \item \textbf{Adjudicate.} Apply the definition and its conditions to the measured
+    transfer, and report the verdict, including a verdict of \emph{not established} if that
+    is what the evidence supports.
+  \item \textbf{Assess mitigations, and bound the claims.} Determine which interventions the
+    measurements support, and state throughout what the work demonstrates as against what it
+    argues.
+\end{itemize}
+
+Objectives one, two, three and five were met. The fourth was not: the adjudication returns
+no verdict, for a reason Section~\ref{sec:howmuch} locates precisely. Reporting that as a
+failed objective rather than redescribing it as a finding is the honest accounting, and
+Chapter~\ref{ch:conclusions} treats it as such.
+
+\section{Contributions}
+\label{sec:contributions}
+
+\begin{enumerate}
+  \item \textbf{A protocol analysis of two opposite designs}, built from primary
+    documentation and implementation source read at a pinned commit, establishing what
+    Sapience's relayer broadcasts, to whom, and with what contents, and what Delphi's
+    settlement architecture is and has been (Chapter~\ref{ch:protocols}).
+  \item \textbf{A separation of three verification properties} that are routinely treated as
+    one: semantic validity, reproducibility and execution attestation. The report argues
+    that reproducibility and attestation are not substitutes, for a technical reason, and
+    that neither protocol's verification machinery guarantees the first. Delphi's own architectural
+    history is read as supporting evidence, since a designer with every incentive to close
+    the whole problem closed execution discretion and published nothing to indicate that
+    specification discretion was closed with it. That is an argument from silence and
+    Section~\ref{sec:threelayer-eval} carries the weaker reading of it. This is the report's
+    principal contribution and it requires no experiment
+    (Chapters~\ref{ch:protocols} and \ref{ch:evaluation}).
+  \item \textbf{A measurement of pre-trade disclosure against a matched benchmark.} A
+    simulator quantifies how much of an informed forecaster's surplus moves when competing
+    responders may condition on the observed request, holding competition, signal quality,
+    dependence and risk borne identical. Six parameters are swept
+    (Chapters~\ref{ch:method} and \ref{ch:results}).
+  \item \textbf{An explicit non-result, reported as one.} Applying the definition above, the
+    experiment establishes neither that the measured transfer is AI-MEV nor that it is
+    ordinary adverse selection. Under the aggregation rule, the second limb of the definition
+    is satisfied and the first is undetermined, because both of the conditions testing it
+    turn on the definitional problem set out above; the risk exclusion is set to zero by the
+    model rather than tested. What survives without depending on the verdict is a design
+    critique: the mechanism offers no priced way to disclose less, at a venue where
+    disclosure is complete, address-linked and unpriced, and the entire measured transfer
+    accrues to the quoting responders in the model (Chapter~\ref{ch:evaluation}).
+  \item \textbf{Two subsidiary measurements with practical consequences.} The share of a
+    forecaster's advantage lost to disclosure rises with the forecaster's accuracy, reaching
+    about ninety-six per cent at the highest accuracy modelled. And direction alone accounts
+    for roughly ninety-five per cent of the transfer, which makes coarsening the disclosed
+    size nearly useless as a mitigation and identifies direction as the quantity a mitigation
+    would have to protect. Which instrument protects it best is not something this experiment
+    can settle (Chapters~\ref{ch:results} and \ref{ch:evaluation}).
+\end{enumerate}
+
+\section{Change of direction since the interim report}
+\label{sec:intro-change}
+
+The interim report submitted in July 2026 proposed a taxonomy of MEV-like extraction across
+decentralised AI networks, supported by two case studies at different layers: a forecasting
+subnet and a distributed-training subnet. The final project is narrower. It studies two
+prediction-market protocols, one empirical question and one analytical proposition. Three
+things drove the change.
+
+The first is that the original breadth would have produced a survey rather than a result. A
+taxonomy spanning inference and training, evaluated against no measurement, would have
+restated the problem in more categories without settling anything.
+
+The second is that the empirical access the interim assumed proved impractical, which the
+interim itself anticipated as an obstacle. Measuring validator behaviour in a live subnet
+requires data that is not published. Both of the protocols studied here are documented by
+their operators; Delphi's contracts are reported audited by Trail of Bits
+\cite{gensyn2026delphi}, and Sapience's implementation is public. Their mechanisms can
+therefore be established from primary sources and modelled offline without approaching a
+live venue.
+
+The third is the substantive one. The two layers turned out not to be symmetric. In a
+distributed-training network the object being evaluated is a model update and the evaluator
+is a scoring rule. In an agentic prediction market the object being traded is a belief and
+the resolver is itself a model, so the informational asymmetry that MEV describes sits
+inside the market's own epistemics rather than beside them. Narrowing to two protocols that
+make opposite choices at both boundaries converts a taxonomy into a comparison with a
+testable claim.
+
+This is narrowing under evidence, and the material that no longer carries the argument has
+been removed rather than retained for its own sake.
+
+\section{Ethical boundary}
+\label{sec:ethics-intro}
+
+This project analyses mechanisms in live financial venues, so the boundary it held requires
+argument rather than assertion.
+
+No real capital was committed anywhere. No transaction was signed on any network, mainnet or
+testnet. No request of any kind was sent to Sapience's relayer, which fans out to real market
+makers, so no synthetic order flow entered a real venue. All protocol facts were established
+by reading published documentation and open-source implementations; all measurements come
+from a simulator.
+
+Chapter~\ref{ch:protocols} nonetheless describes, in detail, an unmitigated information
+disclosure in a named protocol that holds real capital. Four things make that defensible.
+
+\begin{itemize}
+  \item The broadcast is documented by the protocol's own builder guide, so nothing here is
+    disclosed that its operators have not themselves published.
+  \item The implementation is public, so the analysis is of published code rather than of
+    anything obtained privately or by probing a live system.
+  \item No specific market, participant or position is named anywhere in this report.
+  \item Mitigations are presented alongside the analysis rather than deferred, in
+    Section~\ref{sec:mitigations}.
+\end{itemize}
+
+On notification: Sapience was not contacted before this report was written, and the reason
+should be stated rather than left to be inferred. Responsible disclosure exists to give an
+operator time to remediate something they do not know. The behaviour analysed here is one
+the operator documents in its own builder guide and implements in its own open source, so
+there was nothing to notify them of that they had not already published. Had the report
+found a behaviour undocumented by the protocol, that judgement would have been different. The report contains no usable attack recipe: what it
+contributes on this surface is a measurement of what disclosure costs a forecaster and an
+argument about how that cost should be classified, not a method for capturing it. On the
+classification, Chapter~\ref{ch:evaluation} reaches no verdict, and the ethical position
+here does not depend on one. It would be the same if the transfer were shown to be
+extraction, because the response this report offers to that possibility is a set of
+mitigations rather than a technique.
+
+These commitments are restated in the Declarations.
+
+\section{Report structure}
+\label{sec:structure}
+
+Chapter~\ref{ch:background} reviews the five literatures the project draws on and states the
+gap between them. Chapter~\ref{ch:protocols} sets Delphi and Sapience side by side, traces
+what each exposes at execution and at resolution, and develops the separation between
+semantic validity, reproducibility and execution attestation. Chapter~\ref{ch:method}
+specifies the disclosure experiment and says before any result what it can and cannot
+establish. Chapter~\ref{ch:results} reports the six sweeps. Chapter~\ref{ch:evaluation}
+applies the definition above to those results, sets out the limitations at length, and
+assesses mitigations. Chapter~\ref{ch:conclusions} concludes.

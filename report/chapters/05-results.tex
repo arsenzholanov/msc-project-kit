@@ -1,0 +1,400 @@
+\chapter{Results}
+\label{ch:results}
+
+This chapter reports what the simulator produced. It begins with the validity check that the
+harness reproduces the expected sign, summarises all six sweeps in one table, and then takes
+them in turn: the disclosure dial $B$, the responder count $n$, responder signal quality $q$,
+signal dependence $\rho$, forecaster accuracy $q_F$ and the public prior $\pi$. It closes with
+what the information measure can and cannot contribute.
+
+All numbers come from a fixed seed at $200{,}000$ draws per cell, with the baseline
+$n=5$, $q=0.65$, $\rho=0$, $q_F=0.75$, $B=8$, $\pi=0.5$ and one parameter varied at a time.
+The baseline was fixed before any sweep was run.
+
+\paragraph{How differences are judged.} Two intervals are used and they answer different
+questions. A cell's own $95\%$ interval on $L$ is a paired difference between the two arms
+on identical draws; at the baseline it is $\pm 0.0007$. That interval answers whether $L$
+differs from zero in that cell. It is the wrong interval for asking whether $L$ differs
+between two cells, because every cell in a sweep is run from the same seed and therefore
+shares the same realised event and the same forecaster signal, so a between-cell difference
+is itself paired. Its interval is typically an order of magnitude tighter, and the sweeps
+record it for every step. Claims below about whether a change is resolved use the
+between-cell interval; where a step is not resolved even by that test, it is reported as
+unresolved.
+
+\section{Validity check: the sign of the effect}
+\label{sec:validity}
+
+At the baseline the forecaster's expected surplus is $0.3749$ per unit when responders
+cannot condition on the request and $0.1000$ when they can, so $L = 0.2749 \pm 0.0007$.
+
+As Section~\ref{sec:cannot} set out, this is a check on the harness rather than a finding.
+The standard adverse-selection result predicts the sign \cite{glosten1985bidask,
+kyle1985continuous}, and a simulator producing $L \le 0$ would be evidence of an
+implementation error. The check passes. The magnitude at this configuration is reported in
+Section~\ref{sec:res-summary} rather than here, because it is conditional on parameters the
+next sections vary.
+
+One expectation should be lowered before the sweeps rather than after. Three of the six
+sweeps produce behaviour that follows from the same adverse-selection logic that predicts
+the sign; what they add is magnitude and shape rather than direction. Two sweeps, in $q$ and
+in $\pi$, produce non-monotonicity that the sign alone does not anticipate, and the $q_F$
+sweep produces the result with the clearest bearing on the report's argument.
+
+\section{All six sweeps}
+\label{sec:res-table}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{llrrrrX}
+\toprule
+\textbf{Sweep} & \textbf{Range} & \multicolumn{2}{c}{\textbf{$L$}} & \multicolumn{2}{c}{\textbf{$I$ (nats)}} & \textbf{Shape} \\
+ & & low & high & low & high & \\
+\midrule
+$B$    & 1 to 64        & 0.2615 & 0.2752 & 0.119 & 0.171 & rises, flat beyond $B=8$ \\
+$n$    & 1 to 30        & 0.2273 & 0.2844 & \multicolumn{2}{c}{0.170 (invariant)} & rises, flat beyond $n{\approx}25$ \\
+$q$    & 0.51 to 0.95   & 0.0662 & 0.2749 & 0.040 & 0.185 & peaks at $q=0.65$ \\
+$\rho$ & 0 to 1         & 0.2274 & 0.2749 & \multicolumn{2}{c}{0.170 (invariant)} & falls throughout \\
+$q_F$  & 0.55 to 0.95   & 0.0472 & 0.5441 & 0.007 & 0.520 & rises throughout \\
+$\pi$  & 0.1 to 0.9     & 0.0411 & 0.2749 & 0.066 & 0.170 & peaks at $\pi=0.5$ \\
+\bottomrule
+\end{tabularx}
+\caption{Endpoints of every sweep. The $L$ columns are the minimum and maximum over the
+grid, not the values at the ends of the range, because two sweeps are non-monotonic. $I$ is
+constant by construction in the $n$ and $\rho$ sweeps, for the reason given in
+Section~\ref{sec:res-info}; it is a measured quantity only in the other four.}
+\label{tab:results}
+\end{table}
+
+Table~\ref{tab:results} gives every endpoint, so the sections below can carry interpretation
+rather than arithmetic. The grids are: $n \in \{1,2,3,4,5,6,8,10,12,15,20,25,30\}$;
+$q$ and $q_F$ in steps of $0.05$ over their ranges; $\rho$ and $\pi$ in steps of $0.1$;
+and $B \in \{1,2,3,4,6,8,12,16,24,32,48,64\}$.
+
+\section{Disclosure granularity}
+\label{sec:res-buckets}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{sweep_buckets.pdf}
+\caption{Disclosure granularity $B$, on a logarithmic axis. Left: expected forecaster
+surplus per unit in both arms; the no-disclosure arm is flat at $0.3749$ by construction,
+because $B$ affects only what is disclosed. Right: the transfer $L$, solid line with diamonds and
+$95\%$ intervals, on the left axis; the information $I$ in nats, dash-dot line with
+triangles, on the right axis; both axes are anchored at zero. Almost the whole effect is present at $B=1$, where the request carries direction
+alone.}
+\label{fig:buckets}
+\end{figure}
+
+Figure~\ref{fig:buckets} sweeps the disclosure dial from one band to sixty-four. The
+no-disclosure arm is flat at $0.3749$ across every value of $B$, which confirms that $B$
+varies disclosure and nothing else.
+
+The finding is how little the rest of the dial matters. At $B=1$, where the request reveals
+only a direction, $L = 0.2615$. At $B=64$, where it reveals confidence to within a
+sixty-fourth, $L = 0.2752$. Direction alone therefore accounts for $95.0\%$ of the total
+transfer, and the entire range of confidence granularity accounts for the remaining $5\%$.
+
+The curve flattens quickly. Every step up to $B=8$ is resolved; every step from $B=8$
+onwards is not, on the between-cell test. The rise from $B=8$ to $B=64$ is $+0.00024$, which
+is resolved when compared directly across the whole interval but is economically negligible
+and is not attributable to any single step. The practical reading is that granularity beyond
+about eight bands adds nothing worth having.
+
+The information measure behaves differently from the surplus. $I$ rises from $0.119$ nats at
+$B=1$ to $0.171$ at $B=64$, so finer disclosure teaches a responder appreciably more about
+the event while moving very little additional surplus. The two quantities are in different
+units and no ratio between them is meaningful, so the comparison here is directional only:
+$I$ continues to rise over a range where $L$ has stopped.
+
+\section{Responder count}
+\label{sec:res-n}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{sweep_n.pdf}
+\caption{Responder count $n$. Axes as in Figure~\ref{fig:buckets}. Competition raises the
+forecaster's surplus in both arms but raises it less under disclosure, so the transfer grows
+with $n$. The information series is flat because $I$ cannot depend on $n$; see
+Section~\ref{sec:res-info}.}
+\label{fig:n}
+\end{figure}
+
+Figure~\ref{fig:n} sweeps the number of responders from one to thirty. Whether more
+responders help or hurt an informed forecaster is not settled by the sign of
+the effect, because more responders means both more parties observing the request and more
+competition for the business. The measured answer is that competition never dominates. $L$
+rises from $0.2273$ at $n=1$ to $0.2844$ at $n=30$, and every step is resolved except the
+last, from $n=25$ to $n=30$, which is $+7\times10^{-7}$ against an interval of
+$\pm 1.3\times10^{-6}$.
+
+The mechanism is visible in the two arms separately. Competition helps the forecaster in
+both: surplus rises from $0.0016$ to $0.1171$ under disclosure and from $0.2289$ to $0.4015$
+without it. It helps more in absolute terms in the no-disclosure arm, so the gap widens.
+Adding responders to a disclosing mechanism improves the forecaster's position, and worsens
+it relative to the same mechanism without disclosure. Both are true. This report treats the
+relative comparison as the design-relevant one, because it is the only one that isolates the
+disclosure decision from everything else the mechanism does, and that is an argument rather
+than a measurement.
+
+At $n=1$ the disclosure arm leaves the forecaster with $0.0016$ per unit, approximately zero.
+This is not monopoly pricing: the single responder quotes its own posterior truthfully,
+exactly as at every other $n$. What changes with $n$ is only that the forecaster
+selects the most favourable of $n$ quotes, so at $n=1$ there is no order statistic to select
+over, and a responder who has seen the direction holds a posterior close to the forecaster's
+own.
+
+\section{Responder signal quality}
+\label{sec:res-q}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{sweep_q.pdf}
+\caption{Responder signal quality $q$. Axes as in Figure~\ref{fig:buckets}. The transfer is
+non-monotonic, peaking at $q = 0.65$ and collapsing as responders approach certainty, while
+the information a responder gains falls throughout.}
+\label{fig:q}
+\end{figure}
+
+Figure~\ref{fig:q} sweeps responder signal quality. $L$ is non-monotonic in $q$. It rises
+from $0.2528$ at $q=0.51$ to a maximum of $0.2749$ at
+$q=0.65$, then falls to $0.0662$ at $q=0.95$. The peak is resolved against both of its
+neighbours: the step up from $q=0.60$ is $+0.0029$ and the step down to $q=0.70$ is
+$-0.0048$, against between-cell intervals of $\pm 0.0001$ and $\pm 0.0002$. The peak is
+modest in height, $8.7\%$ above the value at $q=0.51$, but the collapse on the right is
+large: the transfer at $q=0.95$ is $24\%$ of its maximum.
+
+The right-hand side is straightforward. A responder near $q=0.95$ already prices close to
+the truth from its own signal, so learning the forecaster's direction shifts its quote very
+little, and $I$ confirms this directly, falling from $0.185$ nats at $q=0.51$ to $0.040$ at
+$q=0.95$.
+
+The left-hand side needs more care, and the explanation is not the one that first suggests
+itself. The forecaster's benchmark surplus is itself strongly non-monotonic in $q$, rising
+from $0.2609$ at $q=0.51$ to a peak of $0.4123$ at $q=0.75$ before falling to $0.1777$ at
+$q=0.95$. The quoted spread follows the same arc, and it is \emph{narrowest} at low $q$:
+$0.019$ at $q=0.51$ against $0.404$ at $q=0.80$. Responders who know almost nothing all
+quote close to the prior, so they quote close to each other, and the forecaster's
+best-of-$n$ selection has almost nothing to select over. The benchmark surplus at low $q$ is
+therefore small because responders are uniformly mispriced rather than dispersed, and $L$,
+being a difference between two arms that are both small there, is bounded by how little
+there was to take. $L$ peaks in the middle because that is where the benchmark surplus is
+already substantial and the request still tells a responder something it does not know.
+
+Note that $I$ is monotone in $q$ while $L$ is not. The information measure is consistent with
+the right-hand collapse and cannot by itself account for the left-hand rise, which is
+governed by the benchmark surplus and the dispersion of quotes rather than by what any one
+responder learns.
+
+\section{Dependence among responder signals}
+\label{sec:res-rho}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{sweep_rho.pdf}
+\caption{Signal dependence $\rho$. Axes as in Figure~\ref{fig:buckets}. The transfer falls
+as responders become more dependent, but so does the forecaster's surplus in both arms.
+Dependence is not good news for the forecaster: it shrinks the measured transfer by
+shrinking what there was to take.}
+\label{fig:rho}
+\end{figure}
+
+Figure~\ref{fig:rho} sweeps signal dependence from independent draws to a single shared
+one. A note on the parameter first. $\rho$ is the probability that a responder copies a single common
+draw rather than drawing its own, so it governs dependence among responder signals but is
+not a correlation coefficient. Every signal is marginally correct with probability $q$ at
+every $\rho$, and the signals are conditionally independent given the event at $\rho = 0$
+rather than unconditionally independent; measured pairwise correlation at $\rho = 0$ is
+$0.09$, not zero. Chapter~\ref{ch:method} describes the construction; the label should be
+read as dependence rather than as a correlation.
+
+$L$ falls monotonically as $\rho$ rises, from $0.2749$ at $\rho=0$ to $0.2274$ at $\rho=1$,
+a reduction of $17\%$, and every step is resolved.
+
+Reporting only that would mislead. The forecaster's surplus falls in \emph{both} arms as
+$\rho$ rises: from $0.3749$ to $0.2288$ without disclosure, and from $0.1000$ to $0.0014$
+with it. In proportional terms the disclosure arm is devastated, retaining $1.4\%$ of its
+value at $\rho=0$. The quoted spread collapses to zero at $\rho=1$, because responders that
+all copy the same draw quote identically and competition between them ceases to operate. At
+$\rho=1$ the $n$ responders behave as one, which is why the numbers there closely match
+those at $n=1$: $L = 0.2274$ against $0.2273$, and a disclosure-arm surplus of $0.0014$
+against $0.0016$.
+
+The mechanism is the destruction of competition, not a reduction in what any responder can
+exploit; Section~\ref{sec:res-info} shows that what an individual responder learns from the
+request does not change with $\rho$ at all. So dependence reduces the measured transfer
+while making the forecaster worse off overall. $L$ is a difference, and a difference can
+shrink because the mechanism became fairer or because there was less left to take. Here it
+is the second, and any reading of the $\rho$ sweep that treats falling $L$ as an improvement
+would be wrong. Chapter~\ref{ch:evaluation} takes this as a caution about the metric itself.
+
+\section{Forecaster accuracy and the public prior}
+\label{sec:res-qf}
+
+Two parameters govern the setting rather than the responders. Both were swept because the
+headline magnitude depends on them and neither is otherwise defensible as a fixed choice.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{sweep_qf.pdf}
+\caption{Forecaster directional accuracy $q_F$. Axes as in Figure~\ref{fig:buckets}. Both
+the transfer and the share of the forecaster's benchmark surplus that it represents rise
+throughout: a better forecaster loses proportionally more to disclosure.}
+\label{fig:qf}
+\end{figure}
+
+Figure~\ref{fig:qf} sweeps forecaster accuracy. $L$ rises monotonically and steeply in
+$q_F$, from $0.0472$ at $q_F=0.55$ to $0.5441$ at
+$q_F=0.95$, with every step resolved. The share of the forecaster's benchmark surplus that
+does not survive disclosure rises with it, from $26.1\%$ at $q_F=0.55$ to $73.3\%$ at the
+baseline $q_F=0.75$ and $95.9\%$ at $q_F=0.95$.
+
+This is the sweep with the clearest bearing on the report's argument, and it is worth
+stating carefully because it is easy to overstate. What the model shows is that under this
+mechanism the proportion of an informed forecaster's advantage that transfers to responders
+increases with how well informed the forecaster is. A forecaster who is barely better than
+the prior keeps roughly three quarters of a small edge; a forecaster who is nearly always
+right keeps roughly four per cent of a large one. Disclosure therefore bears hardest on
+precisely the participants whose information the market exists to aggregate. Whether that
+constitutes the transfer the report's definition is concerned with, or ordinary compensation
+to responders for facing a better-informed counterparty, is the question
+Chapter~\ref{ch:evaluation} takes up; the measurement does not settle it.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{sweep_pi.pdf}
+\caption{Public prior $\pi$. Axes as in Figure~\ref{fig:buckets}. The transfer is symmetric
+about an even prior and falls away sharply towards either certainty.}
+\label{fig:pi}
+\end{figure}
+
+Figure~\ref{fig:pi} sweeps the public prior. $L$ is symmetric in $\pi$ and peaks at
+$\pi = 0.5$, falling from $0.2749$ there to $0.0418$
+at $\pi = 0.1$ and $0.0411$ at $\pi = 0.9$. Every step is resolved, and the near-equality of
+the two tails is a useful internal consistency check, since nothing in the model privileges
+either outcome. The reading is that disclosure matters most when the public estimate is
+least informative. On a question the public prior already nearly settles, a forecaster's
+direction is close to predictable and reveals little.
+
+\section{What the information measure contributes}
+\label{sec:res-info}
+
+Reporting $I$ alongside $L$ was intended to link how much responders learn to how much
+surplus moves. The link is real in some sweeps and absent by construction in others, and the
+distinction matters.
+
+$I$ is computed from a responder's own signal, the observed action, and the publicly known
+parameters $q$, $\pi$, $q_F$ and $B$. It contains no $n$ and no $\rho$. Because every
+responder signal is marginally correct with probability $q$ whatever $\rho$ is, and because
+the action is independent of a responder's signal given the event, the joint distribution
+that $I$ averages over does not depend on either parameter. \textbf{$I$ therefore cannot vary with
+$n$ or with $\rho$.} The flatness observed in those two sweeps, at $0.170$ nats throughout,
+is a check that the metric is implemented as defined; it is not a measured null and it is
+not evidence about disclosure. It is reported as such in Table~\ref{tab:results}, and the
+figures show a flat series against an axis anchored at zero so that the constancy is legible
+rather than magnified into an apparent trend.
+
+What follows from that invariance is nevertheless useful, and it is a logical consequence
+rather than an empirical discovery: since $I$ is constant while $L$ varies by $25\%$ across
+the $n$ sweep and $17\%$ across the $\rho$ sweep, $L$ is not a function of $I$ alone. What
+converts a responder's learning into transferred surplus is the competitive structure, not
+the learning by itself.
+
+In the four sweeps where $I$ can move, it does. It falls monotonically in $q$, rises in $B$,
+rises steeply in $q_F$, and peaks with $L$ at $\pi = 0.5$. In three of those four it moves
+with $L$; in $q$ it does not, because $L$ is non-monotonic there and $I$ is not.
+
+The consequence for Chapter~\ref{ch:evaluation} is narrow and should not be inflated. A
+mechanism that limited how much a request reveals, measured in nats, would not thereby
+determine the economic transfer, because the same $I$ is consistent with a range of $L$
+spanning $25\%$. It remains true that $I = 0$ forces $L = 0$ in this model, so limiting
+disclosure does constrain the transfer; the point is that it does not pin it down, and that
+the competitive environment must be considered alongside any disclosure bound.
+
+\section{Robustness to the seed}
+\label{sec:res-seeds}
+
+Every figure in this chapter is drawn from one realisation at the seed fixed in
+Chapter~\ref{ch:method}. The paired intervals bound Monte Carlo error within that
+realisation and say nothing about how far the results would move at a different one. The
+sweeps were therefore re-run in full at five seeds. Table~\ref{tab:seeds} reports the result.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{Xll}
+\toprule
+\textbf{Claim or statistic} & \textbf{Across five seeds} & \textbf{Spread} \\
+\midrule
+$L > 0$ at the baseline & holds at every seed & --- \\
+$L$ increases monotonically in $n$ & holds at every seed & --- \\
+$L$ decreases monotonically in $\rho$ & holds at every seed & --- \\
+$L$ increases monotonically in $q_F$ & holds at every seed & --- \\
+The $q$ sweep peaks at $q = 0.65$ & holds at every seed & --- \\
+The $\pi$ sweep peaks at $\pi = 0.5$ & holds at every seed & --- \\
+\midrule
+Baseline $L$ & $0.2744$ to $0.2755$ & $0.0011$ \\
+Share of benchmark surplus lost at baseline & $73.3\%$ to $73.8\%$ & $0.5$ pp \\
+Direction's share of the transfer & $94.9\%$ to $95.2\%$ & $0.3$ pp \\
+Share lost at $q_F = 0.55$ & $26.1\%$ to $26.6\%$ & $0.5$ pp \\
+Share lost at $q_F = 0.95$ & $95.9\%$ to $96.0\%$ & $0.1$ pp \\
+\bottomrule
+\end{tabularx}
+\caption{Seed robustness. Every qualitative claim in this chapter survives all five seeds,
+including both locations of a non-monotonic peak, and no headline statistic moves by as much
+as one percentage point.}
+\label{tab:seeds}
+\end{table}
+
+Two observations are worth making. The first is that the two non-monotonic results, which
+are the ones a single realisation could most plausibly have manufactured, put their peak at
+the same grid point at every seed. The second is that the spread in baseline $L$ across
+seeds, $0.0011$, is slightly larger than a single cell's $95\%$ interval of $\pm 0.0007$,
+which is what one would expect of the range of five draws and is a mild reminder that the
+within-seed interval is not a bound on total uncertainty.
+
+This check bounds seed variation. It does not bound specification variation: every run uses
+the same model, and the sensitivity of these results to the modelling choices set out in
+Section~\ref{sec:cannot} is untested.
+
+\section{What this chapter established}
+\label{sec:res-summary}
+
+Demonstrated, in the sense of measured by the experiment:
+
+\begin{enumerate}
+  \item Under a matched benchmark holding competition, signal quality, dependence and risk
+    identical, letting responders condition on the request transfers
+    $L = 0.2749 \pm 0.0007$ per unit at the baseline, $73.3\%$ of the forecaster's benchmark
+    surplus. The sign was expected; the magnitude is a property of this model at this
+    configuration, and Section~\ref{sec:res-qf} shows how strongly it depends on $q_F$.
+  \item Direction alone accounts for $95.0\%$ of that transfer. Coarsening the disclosed
+    confidence from sixty-four bands to one recovers only $5\%$ of it, and no step beyond
+    $B=8$ is individually resolved.
+  \item $L$ rises in the number of responders, with every step resolved except the last.
+    Competition helps the forecaster in both arms but helps less under disclosure, so more
+    competition does not compensate for disclosure. At $n=1$ the disclosure-arm surplus is
+    approximately zero, through the absence of any quote to select over rather than through
+    monopoly pricing.
+  \item $L$ is non-monotonic in responder signal quality, peaking at $q=0.65$ and falling to
+    $24\%$ of that maximum by $q=0.95$. The peak is resolved against both neighbours.
+  \item $L$ falls as responder signals become more dependent, but the forecaster's surplus
+    falls in both arms and the disclosure arm retains $1.4\%$ of its value at $\rho=1$. The
+    metric improves while the forecaster's position worsens.
+  \item The share of benchmark surplus lost to disclosure rises monotonically with
+    forecaster accuracy, from $26.1\%$ at $q_F=0.55$ to $95.9\%$ at $q_F=0.95$.
+  \item $L$ is symmetric in the public prior and peaks where the prior is least informative.
+\end{enumerate}
+
+Established by construction rather than measured: $I$ does not vary with $n$ or $\rho$, from
+which it follows that $L$ is not a function of $I$ alone.
+
+Not established by this chapter: any magnitude for a live venue; anything about accumulation
+across repeated requests, which is not modelled; anything about multi-leg disclosure, which
+was not implemented; and, most consequentially for what follows, any separation between surplus
+transferred because of information and surplus that would compensate a responder for risk.
+The model's responders are risk-neutral and quote their own posteriors without shading, so
+that separation is imposed by construction rather than measured, and $L$ should not be read as
+pure information rent. Chapter~\ref{ch:evaluation} asks how much of $L$ meets the definition
+this report adopted, and how much of it is ordinary adverse selection.

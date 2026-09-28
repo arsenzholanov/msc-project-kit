@@ -1,0 +1,434 @@
+\chapter{Evaluation, Critical Appraisal and Mitigations}
+\label{ch:evaluation}
+
+This chapter asks what the preceding two chapters are worth. It separates what the
+experiment demonstrates from what the report argues, reads the measured transfer in the
+light of what happens to the responders as well as the forecaster, applies the definition
+adopted in Chapter~\ref{ch:introduction} to the result, and then sets out at length what the
+work cannot establish. It closes with mitigations and with a comparison against related
+work. The conclusion of the first half is that the experiment does not settle the question it
+was built to address, for reasons that are themselves informative: one limb of the
+definition is satisfied, the other is undetermined because both conditions testing it turn
+on a definitional problem the report inherits from the MEV literature, and the definition's
+exclusion for risk compensation is set to zero by an assumption of the model. What survives is a design critique that does not depend on the verdict.
+
+\section{What is demonstrated and what is argued}
+\label{sec:demonstrated}
+
+The distinction matters enough to be made in a table rather than left to the reader.
+Table~\ref{tab:epistemic} sorts the report's substantive claims by the kind of support each
+has.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.30\textwidth}p{0.19\textwidth}X}
+\toprule
+\textbf{Claim} & \textbf{Status} & \textbf{Basis} \\
+\midrule
+The Sapience relayer broadcasts each request to every connected client, carrying the full pick set, the size and the predictor's address & Established & The protocol's own builder guide and implementation, read at a pinned commit \\
+Disclosure moves surplus from an informed forecaster to responders & Demonstrated & Measured against a matched benchmark; the sign was expected on theory \\
+The share of the forecaster's advantage lost rises with forecaster accuracy & Demonstrated & The $q_F$ sweep, every step resolved \\
+Direction alone accounts for most of the transfer & Demonstrated & The $B$ sweep \\
+Responders capture the whole of $L$ relative to the matched benchmark & Demonstrated & The change in responder surplus equals $L$ in all 64 cells \\
+Responder surplus is the negative of forecaster surplus, and responders lose in absolute terms & True by construction & An accounting identity; the model has no uninformed order flow \\
+Whether $L$ is rent or compensation & Not settled & Section~\ref{sec:howmuch}; risk is assumed away and the comparison population is absent \\
+Accumulation across requests confers advantage & Argued only & Not modelled; Section~\ref{sec:limitations}(c) \\
+Multi-leg requests disclose joint belief & Argued only & Not implemented \\
+Semantic validity, reproducibility and attestation are distinct, and neither protocol's verification machinery guarantees the first & Argued & Chapter~\ref{ch:protocols}, from primary documentation \\
+\bottomrule
+\end{tabularx}
+\caption{The report's claims by epistemic status. The two rows that matter most for the
+overall argument, accumulation and semantic validity, are both argued rather than measured.}
+\label{tab:epistemic}
+\end{table}
+
+\section{Who captures the transfer, and what the model cannot say about it}
+\label{sec:responders}
+
+Chapter~\ref{ch:results} reported $L$ as a transfer away from the forecaster. Establishing
+who receives it requires care, because one natural way of asking the question gives an
+answer that is true by construction and tells us nothing.
+
+\paragraph{The uninformative version.} Responder surplus in this model is the negative of
+forecaster surplus, exactly, in all sixty-four cells of the six sweeps. That is an accounting
+identity, not a measurement: Chapter~\ref{ch:method} notes it, the model is zero-sum between
+two parties, and the forecaster is the only trader and is always informed. It follows that
+responders lose money in absolute terms in every configuration, and no parameter setting
+could make them profitable. Nothing about disclosure can be inferred from that fact.
+
+The structural reason matters and is worth stating, because it bounds the model. In Glosten
+and Milgrom, a market maker survives because gains from uninformed traders offset losses to
+informed ones \cite{glosten1985bidask}. This model contains no uninformed order flow at all.
+Its responders therefore face a population that is informed with probability one, and their
+absolute losses are a consequence of that omission rather than a finding about the
+mechanism. The model is silent on what spread would make a responder solvent, and therefore
+silent on what fraction of a real venue's quoted spread $L$ would represent.
+
+\paragraph{The informative version.} Rent is defined against a counterfactual, never against
+zero, and the matched no-disclosure benchmark is precisely the counterfactual the experiment
+was built to supply. Measured against it, responders' surplus rises from $-0.3749$ to
+$-0.1000$ at the baseline, a gain of $0.2749$. In every one of the sixty-four cells that gain
+equals $L$ to the last digit. Relative to the benchmark, the responders capture the whole of
+the transfer.
+
+That is the correct reading and it points the opposite way from the absolute figures.
+Disclosure does not dissipate the forecaster's advantage; it moves it, entirely, to the
+responders who quote on the request. What the model cannot say is whether receiving it leaves
+those parties better off than a fair price for the service they provide, because it has
+removed the population against which that judgement would be made.
+
+\section{How much of the transfer meets the definition}
+\label{sec:howmuch}
+
+Chapter~\ref{ch:introduction} defined AI-MEV as value captured because of role-specific
+protocol access, beyond what is attributable to forecasting ability or to ordinary
+competitive compensation for risk borne, and set out four conditions under which a transfer
+might qualify. This section applies them, and takes the risk exclusion in the definition
+first because it governs the rest. The result is that the experiment does not settle the question, and the reasons are
+more interesting than a verdict either way would have been.
+
+\paragraph{Compensation for risk: exactly zero within the model, and unmeasurable outside
+it.} The definition excludes ordinary competitive compensation for risk borne. This model's
+responders are risk-neutral, and a risk-neutral agent requires no compensation for risk. It
+follows that within the model the risk component of $L$ is zero and the transfer is entirely
+informational. This is the opposite of a concession, and it must not be mistaken for
+evidence: the model does not measure that the transfer is not risk compensation, it assumes
+a world in which no risk compensation is owed. What a risk-averse responder facing inventory
+and capital constraints would require is outside the experiment entirely, and
+Section~\ref{sec:limitations}(a) treats that as the deepest limitation of the work.
+
+\paragraph{No priced option not to disclose: satisfied.} The documentation states that
+unsigned requests receive no actionable bids and should be treated as price discovery only
+\cite{sapience2026builderguide}. A forecaster who wants a fill must broadcast the request in
+full: every pick with its direction, the size, and an address. There is no mechanism for
+revealing a coarser version of the request one is actually making.
+
+The $B$ sweep of Figure~\ref{fig:buckets} qualifies what this is worth, and the
+qualification cuts both ways. A coarsening option would address the roughly five per cent of
+the transfer that confidence granularity controls; the direction, which carries the other
+ninety-five per cent, cannot be withheld at all by someone intending to trade. So the option the
+mechanism withholds is the cheaper one. The condition is satisfied as stated, and
+what it is worth to a forecaster is smaller than the phrasing suggests. That figure also
+depends on the correspondence between disclosed size and confidence which
+Section~\ref{sec:limitations}(e) records as unverified.
+
+\paragraph{Asymmetric access: contested, and the contest is definitional.} The condition asks
+whether some parties see order flow that others do not, or see it earlier.
+Chapter~\ref{ch:protocols} established that the relayer broadcasts to every connected client
+with no allowlist and no filtering \cite{sapience2026relayer,sapience2026builderguide}. It
+did not establish that anyone may become a connected client, and recorded that claim as
+argued rather than demonstrated; this chapter does not upgrade it. On the second limb, the
+broadcast loop iterates connections in order, so some client is written to first, and
+nothing in this report measures whether that ordering confers advantage.
+
+The harder problem is definitional and the report should confront it rather than resolve it
+conveniently. Suppose access is indeed open to anyone who connects. Ethereum's public
+mempool is also open to anyone who connects, and participation there is gated by capital and
+infrastructure rather than by permission; that is the canonical setting of the MEV
+literature this project builds on \cite{daian2019flashboys,ethereummev}. A reading of
+``role-specific protocol access'' under which capital-gated access to a public stream cannot
+qualify would exclude most of what MEV means in practice, and would leave the framework
+unable to identify the phenomenon in the setting where it is least disputed. A reading under
+which it does qualify makes the condition nearly always satisfied and correspondingly weak.
+This report does not resolve that tension. It notes that the definition adopted in
+Chapter~\ref{ch:introduction} inherits it from the literature rather than introducing it,
+and that any verdict on this condition is a verdict about the definition rather than about
+Sapience.
+
+\paragraph{Accumulation: argued, not demonstrated.} An address appears in every broadcast,
+so a per-address history is cheap to build from an unprivileged position by anyone the
+forecaster does not defeat by rotating. That
+is documented protocol behaviour. Whether it converts into an advantage that competitive
+quoting does not compensate is not measured anywhere in this report, because responders
+carry no state across events and the concentration parameter was not implemented. A reader
+is entitled to treat this limb as unsupported, and Section~\ref{sec:limitations}(c) lists it
+as the most consequential gap.
+
+\paragraph{Role-conditional: satisfied in form, subject to the same definitional question.}
+The advantage attaches to occupying the responder position rather than to forecasting well,
+which is what the condition asks. Whether occupying that position counts as protocol-specific
+when it requires capital rather than permission is the question of the preceding paragraph
+and has the same answer, which is that the report does not settle it.
+
+\paragraph{The conclusion, stated plainly.} The aggregation rule of
+Section~\ref{sec:definition} requires one condition on each limb. In the terms defined
+there, the second limb asks whether the transfer is mechanism-mediated information rent
+rather than epistemic reward, and the answer is that it is: the forecaster earns less for
+the same forecasting ability solely because of how the request is broadcast. That limb
+\emph{is} satisfied: the mechanism offers no priced
+option not to disclose, established from the protocol's own documentation, and the
+accumulation condition would reinforce it if it could be measured. The first limb, that the
+access is role-specific, is undetermined, and it is undetermined for one reason rather than
+four: both of its conditions turn on whether capital-gated access to a public stream counts
+as protocol-specific, and Section~\ref{sec:definition} set out why that question is
+inherited from the MEV literature rather than answerable here.
+
+So the verdict fails on a single identified point, not on a vague insufficiency of evidence.
+That is worth stating precisely, because it says what would settle the matter: a defensible
+reading of role-specificity that survives the public-mempool objection would decide this
+case immediately, given that the other limb is already satisfied. The risk exclusion in the
+definition is a separate matter and is zero within the model by assumption, so it neither
+blocks nor supports the verdict. \textbf{The experiment does not establish that the measured transfer is AI-MEV, and it does
+not establish that it is ordinary adverse selection.} It cannot do the second because it has assumed risk away and removed the
+uninformed order flow against which compensation would be judged; it cannot do the first
+because the two conditions that would carry the claim are one unmeasured and one definitional.
+
+An earlier draft of this chapter concluded that most of the transfer was ordinary adverse
+selection. That conclusion rested on the absolute losses discussed in
+Section~\ref{sec:responders}, which are an artefact of the missing uninformed traders, and
+on reading risk-neutrality as evidence for a compensation interpretation when it implies the
+reverse. It is withdrawn. Conceding a result on unsound reasoning is not more honest than
+claiming one, and it would have been harder for a reader to catch.
+
+What survives is not a verdict but a design critique, and it does not depend on the
+definitional question. The mechanism compels complete, address-linked disclosure and offers
+nothing cheaper. Against the matched benchmark, the whole of the forecaster's lost surplus
+accrues to the responders who quote on it. And the share lost rises with the
+forecaster's accuracy, from twenty-six per cent at the lowest accuracy modelled to
+ninety-six per cent at the highest (Figure~\ref{fig:qf}), so the mechanism's informational
+cost scales with the quality of the information supplied. Whatever that transfer is called,
+a prediction market whose disclosure cost rises with forecaster skill is taxing the input it
+exists to attract.
+
+\section{Semantic validity is not reproducibility is not attestation}
+\label{sec:threelayer-eval}
+
+The second contribution is developed in Chapter~\ref{ch:protocols} and is not restated here.
+Three points bear on the evaluation.
+
+The first is that it needs no experiment, and is therefore unaffected by every limitation in
+Section~\ref{sec:limitations}. The separation between the three properties, the technical
+reason reproducibility and attestation are not substitutes, and the observation that neither
+protocol's verification machinery guarantees semantic validity, all rest on primary
+documentation read directly
+\cite{gensyn2026receipts,truebit2026orchestration,uma2026oracle}.
+
+The second is a qualification of how strongly Delphi's architectural history supports the
+separation, and the weight it can bear. Chapter~\ref{ch:protocols} establishes the removal
+of execution discretion and does not assert what remains, because
+Section~\ref{sec:limitations}(h) records that no first-party source establishes who writes
+the settlement specification under the automated-settlement deployment. What the sources
+support is that a designer closed execution discretion and published nothing to indicate
+that specification discretion was also closed. That is evidence, because a protocol that had
+removed specification power would have reason to say so, but it is an argument from silence
+and the silence has a competing explanation, since Gensyn currently document no settlement
+mechanism at all. Every chapter that cites the history carries that weaker reading.
+
+The third is that this contribution is the more durable of the two, precisely because it
+does not depend on the definitional question that Section~\ref{sec:howmuch} could not
+resolve. Whether a disclosure transfer counts as MEV is contested. Whether a verification
+stack establishes that a specification was neutral is not: it does not, on the vendors' own
+statements.
+
+\section{Critical limitations}
+\label{sec:limitations}
+
+This section is deliberately the longest in the chapter and the least flattering. The
+limitations are ordered from the most fundamental to the most contingent.
+
+\paragraph{(a) The model cannot separate information rent from risk compensation, which is
+the distinction the report's definition turns on.} Responders are risk-neutral and quote
+their own posteriors without shading, so within the model the risk component is zero by
+assumption and $L$ is entirely informational. The model therefore cannot measure what a risk-averse responder
+would require, and every statement in Section~\ref{sec:howmuch} about compensation rests on
+reasoning about the model's structure rather than on any measurement. This is the deepest
+limitation and no amount of further sweeping would address it; it would require a model in
+which responders price risk, hold inventory and choose whether to participate.
+
+\paragraph{(b) There is no uninformed order flow, so responders cannot be solvent.} The
+model's single trader is informed with probability one. In Glosten and Milgrom a market
+maker breaks even because gains from uninformed traders offset losses to informed ones
+\cite{glosten1985bidask}; with that population removed, responders lose in every
+configuration and no parameter setting could change it. A second mechanism compounds this:
+because the forecaster takes the best of $n$ quotes, the responder that trades is the one
+whose signal was most misleading in the forecaster's favour, and the model gives it no way to
+shade against that selection. This is why the absolute surplus
+figures carry no information, and why Section~\ref{sec:responders} reads the transfer
+against the matched benchmark instead. It also means the model has no participation
+constraint and cannot say what spread would make a responder willing to quote, so its
+magnitudes are upper bounds on the forecaster's position rather than estimates of any real
+one.
+
+The consequence for interpretation is set out at the point the benchmark is chosen, in
+Section~\ref{sec:benchmark}, and is repeated here because it bounds every number in
+Chapter~\ref{ch:results}: measured against a benchmark no responder would join, $L$ is as
+defensible read as the share of a structural loss that disclosure recovers as read as
+surplus transferred. The experiment does not distinguish the two.
+
+\paragraph{(c) Accumulation, the limb that most needs support, has none.} The report's
+argument that an address in every broadcast confers a durable advantage is structural and
+unmeasured. Responders carry no state across events. Whether an observer who
+builds a per-forecaster history can price better than competition permits, and whether the
+resulting advantage would survive a forecaster who rotated addresses, are both open. This is
+the single place where a reader who wished to reject the report's argument would find the
+least resistance.
+
+\paragraph{(d) One event, one forecaster, one round, and no decision to trade.} There is no
+repeated play, no reputation, no competition between forecasters and no option to withhold a
+request when the expected disclosure cost exceeds the expected gain. A forecaster who could
+decline faces a different problem from the one modelled, and the ability to decline is
+plausibly the most important strategic response available to a real participant.
+
+\paragraph{(e) The disclosure dial is a modelling device, not a feature of either venue.}
+$B$ coarsens confidence into bands. Sapience broadcasts an exact size. The correspondence
+argued in Chapter~\ref{ch:method}, that size stands in for confidence because a more
+confident forecaster stakes more, is plausible and unverified; no data on the relationship
+between forecaster confidence and position size at any venue is used anywhere in this
+report. The $B$ sweep should be read as characterising a family of mechanisms rather than as
+measuring this one.
+
+\paragraph{(f) Traded size is constant, which removes a real strategic choice.} Holding size
+fixed was necessary to keep $B$ a clean disclosure dial, and it removes the forecaster's
+ability to reduce disclosure by trading smaller. A forecaster who split a position across
+several requests would disclose less per request at the cost of executing in pieces, and
+that trade-off is not modelled.
+
+\paragraph{(g) Multi-leg disclosure is argued and never implemented.} The strongest form of
+the disclosure argument, that a combination reveals joint rather than marginal belief, rests
+entirely on Chapter~\ref{ch:protocols}'s reading of the payload. No experiment supports it.
+
+\paragraph{(h) The protocol analysis describes a moving target, and one half of the
+comparison may be out of date.} Chapter~\ref{ch:protocols} could not establish whether
+prompt authorship and model selection remain with the market creator under Delphi's
+automated-settlement deployment, because Gensyn's current documentation describes no
+settlement mechanism. The Delphi half of the resolution comparison therefore describes a
+design documented in May 2026 that may no longer be deployed, while the Sapience half
+describes current behaviour. That asymmetry is unavoidable given the sources and it weakens
+the comparison.
+
+\paragraph{(i) The attested-settlement architecture is not established as Delphi's.} Truebit
+describe an unnamed client. The report's evolution argument is constructed not to depend on
+the identification, but a reader who assumed the identification would draw a stronger
+conclusion than the sources support.
+
+\paragraph{(j) Reported numbers come from one seed, though the conclusions do not depend on
+it.} Every figure in Chapter~\ref{ch:results} is drawn from a single realisation, and the
+paired intervals capture Monte Carlo error within that realisation rather than across seeds.
+Section~\ref{sec:res-seeds} reports a check at five seeds: every qualitative claim holds at
+all five, and the headline statistics move by less than one percentage point. The residual
+limitation is narrower than it was but is not zero, since five seeds bound variation rather
+than eliminating it, and the check was run on the sweeps as specified rather than on
+alternative specifications of the model.
+
+\paragraph{(k) No live-venue data of any kind.} Nothing in this report measures anything
+that happened on Delphi or Sapience. The ethical boundary described in
+Chapter~\ref{ch:introduction} was held, and the cost of holding it is that every empirical
+claim is about a simulator.
+
+\section{Mitigations}
+\label{sec:mitigations}
+
+The mitigations below follow from the measurements where they can and are argued where they
+cannot. Each is assessed against what Chapter~\ref{ch:results} showed.
+
+\paragraph{Coarsening the disclosed size.} A venue could broadcast a size band rather than an
+exact size. The $B$ sweep prices this directly and the answer is discouraging: moving from
+sixty-four bands to one recovers about $5\%$ of the transfer, because direction alone
+accounts for the rest. Coarsening size is cheap and nearly useless.
+
+\paragraph{Withholding direction.} Since direction carries $95\%$ of the effect, a mechanism
+that solicited quotes without revealing which side the requester wanted would address the
+part that matters. Two-sided quoting is the standard instrument, and it must not be confused
+with this experiment's no-disclosure arm: in that arm responders never learn the direction
+at all, whereas under two-sided quoting the responder posts both sides and the informed
+forecaster then chooses which to hit, which is the Glosten-Milgrom setting in which the
+market maker is picked off \cite{glosten1985bidask}. Two-sided quoting does not eliminate
+adverse selection; it prices it into the spread. This experiment does not model
+side-selection against a posted quote and so cannot say how much of the $95\%$ such a
+mechanism would recover. The measurement identifies direction as the quantity worth
+protecting; which instrument protects it best it cannot settle.
+
+\paragraph{Sealed bids and delayed reveal.} Committing bids before the request is revealed,
+or revealing the request only to the winning responder, would approximate the no-disclosure
+arm. This is argued rather than measured: the experiment models what responders know, not
+the mechanism by which they come to know it, so it cannot distinguish a sealed-bid scheme
+from any other means of achieving the same information state.
+
+\paragraph{Noised or aggregate disclosure.} Publishing a differentially private hint rather
+than the request itself is the approach taken in order-flow auctions
+\cite{passeratpalmbach2025dphints}, and the closest analytic treatment derives a closed-form
+spread and a per-trade welfare transfer for a market maker observing a noisy direction signal
+in the Glosten-Milgrom setting \cite{nakamura2026privacysubsidy}, with a continuous-time
+counterpart \cite{nakamura2026kyle}. Both are unrefereed preprints and both model a single
+committed market maker rather than competing responders, so they bound a different problem
+from the one measured here. What this report adds is a caution rather than a
+result: because $I$ is invariant by construction across the responder-count and dependence
+sweeps while $L$ varies by up to a quarter, a bound on how much a request reveals does not
+determine the economic transfer. That is a logical consequence of the metric's definition
+rather than a measurement, as Section~\ref{sec:res-info} states. It bears on the mitigation
+nonetheless: a disclosure bound constrains $L$ without pinning it down, and the competitive
+environment has to be modelled alongside it.
+
+\paragraph{Evaluation inside a trusted execution environment with conditional recall.} A
+responder could evaluate a request inside an enclave and be required to discard it if no
+trade results, so that a request previews information without the responder retaining it.
+The idea was raised as credible forgetting at the MEV-SBC agentic MEV breakout
+\cite{mevsbc2026breakout}. It targets the accumulation limb, which is the limb this report
+could not measure. One objection must be stated with it: a responder has to emit a quote,
+and a quote conditioned on the request already encodes information about it, to the
+forecaster and to anyone observing quotes. An enclave can stop a responder retaining a
+request; it cannot unsay what the responder's own price reveals. Conditional recall
+therefore bounds accumulation across requests rather than disclosure within one. That is
+still the right target for the gap this report leaves open, but it is a narrower claim than
+the idea first suggests. It is argued here and not evaluated.
+
+\paragraph{On the resolution side, there is no mitigation of the same kind.} Nothing in the
+verification stack addresses specification neutrality, so the available responses are
+procedural rather than cryptographic: separating the party who writes the settlement
+criterion from the party who holds a position, publishing criteria before trading opens so
+that they can be contested while contesting is still cheap, and treating a settlement
+specification as a governance artefact rather than a configuration field. None of these is
+verifiable in the sense the rest of the stack is verifiable, which is the point.
+
+\section{Comparison with related work}
+\label{sec:related}
+
+Table~\ref{tab:related} positions the work.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.26\textwidth}p{0.28\textwidth}X}
+\toprule
+\textbf{Approach} & \textbf{What it establishes} & \textbf{What it does not} \\
+\midrule
+Classical microstructure \cite{glosten1985bidask,kyle1985continuous} & That informed order flow forces a spread, analytically and in general & Nothing specific to a broadcast RFQ, a public order-flow stream, or belief as the traded object \\
+Order-flow auction privacy \cite{passeratpalmbach2025dphints} & That disclosure can be quantified and priced, with a mechanism for doing so & It treats transaction order flow, not forecasts, and does not address resolution \\
+Noisy-observation microstructure \cite{nakamura2026privacysubsidy,nakamura2026kyle} & Closed-form spread and welfare under a noisy direction signal & A single committed market maker, not $n$ competing responders with dependent signals; unrefereed \\
+Prediction-market arbitrage \cite{saguillo2025forest,gebele2026semantic} & That event semantics and fragmentation create exploitable inconsistency, within a platform and across platforms respectively & It concerns pricing rather than disclosure at execution or the settlement procedure \\
+This report & A matched-benchmark measurement of disclosure under competing responders, and a separation of three verification properties & It measures no live venue, cannot separate risk from information, and does not model accumulation \\
+\bottomrule
+\end{tabularx}
+\caption{Position of this work. The final row's third column is the honest summary of the
+preceding sections: what this report adds is a controlled comparison and an analytical
+separation, not a measurement of extraction.}
+\label{tab:related}
+\end{table}
+
+\section{What this chapter established}
+
+The experiment demonstrates that disclosure moves surplus away from an informed forecaster,
+that measured against the matched benchmark the responders capture the whole of it, that
+direction carries about ninety-five per cent of the effect, and that the share lost rises
+with the forecaster's accuracy to ninety-six per cent at the highest accuracy modelled.
+
+It does not establish whether that transfer is AI-MEV. Under the aggregation rule of
+Section~\ref{sec:definition} the second limb of the definition is satisfied and the first is
+undetermined, because both of the conditions testing it turn on a question this report
+inherits from the MEV literature and does not resolve. The definition's risk exclusion is
+set to zero by an assumption of the model rather than tested, so it neither blocks the
+verdict nor supports it. An
+earlier draft of this chapter concluded that most of the transfer was ordinary adverse
+selection. That conclusion rested on an accounting identity and on a backwards reading of
+risk-neutrality, and Section~\ref{sec:howmuch} withdraws it.
+
+What survives without depending on the verdict is a design critique. The mechanism compels
+complete, address-linked disclosure and offers nothing cheaper; the whole of the forecaster's
+lost surplus accrues to the responders who quote on it; and the cost rises with the quality
+of the information disclosed.
+
+The argued contribution stands independently of all of it. Semantic validity,
+reproducibility and execution attestation are three properties, neither protocol's verification
+machinery guarantees the first, and the vendors say so themselves.
+Chapter~\ref{ch:conclusions} takes up what follows.

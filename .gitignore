@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.synctex.gz
+*.toc
+report/main.pdf
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+slides/main.pdf
+slides/*.nav
+slides/*.snm
+slides/*.vrb
